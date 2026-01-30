@@ -4,137 +4,176 @@
 
 ## Project Overview
 
-**Pesocnica** (Песочница - Russian for "sandbox") is a testing and experimental repository. This project serves as a playground for development experiments, prototyping, and learning.
+**Pesocnica** (Песочница - Russian for "sandbox") is a modern HR Portal web application. This project demonstrates a clean, responsive UI for managing company requests with features like filtering, sorting, and status tracking.
 
 ## Repository Status
 
-- **Current State**: Fresh/Empty repository
-- **Purpose**: Sandbox for experimentation and development
-- **Language(s)**: To be determined based on project direction
+- **Current State**: Active development - HR Portal UI
+- **Purpose**: Modern web application for HR request management
+- **Language(s)**: HTML, CSS, JavaScript (Vanilla)
 
 ## Directory Structure
 
 ```
 Pesocnica/
-├── CLAUDE.md          # This file - AI assistant guidelines
-└── (project files)    # To be added as project develops
+├── CLAUDE.md          # AI assistant guidelines
+├── index.html         # Main HTML structure
+├── styles.css         # Modern CSS with custom properties
+└── script.js          # JavaScript for interactivity
 ```
+
+## Tech Stack
+
+- **HTML5**: Semantic markup
+- **CSS3**: Modern features (CSS Variables, Flexbox, Grid, Animations)
+- **JavaScript**: Vanilla ES6+ (no frameworks)
+- **External**:
+  - Google Fonts (Inter)
+  - Font Awesome 6.4.0 (icons)
+  - UI Avatars API (avatar generation)
 
 ## Development Guidelines
 
 ### Getting Started
 
 1. Clone the repository
-2. Set up your development environment based on the technologies used
-3. Follow the conventions outlined in this document
+2. Open `index.html` in a browser (or use a local server)
+3. No build step required - pure HTML/CSS/JS
+
+### Running Locally
+
+```bash
+# Option 1: Direct file open
+open index.html
+
+# Option 2: Python server
+python -m http.server 8000
+
+# Option 3: Node server (if available)
+npx serve .
+```
 
 ### Code Style & Conventions
 
-When adding code to this repository, follow these principles:
+**CSS:**
+- Use CSS custom properties (variables) for colors, spacing, etc.
+- BEM-like naming: `.component`, `.component-element`, `.component.modifier`
+- Mobile-first responsive design
+- Organize sections with comment headers
 
-- **Consistency**: Match existing code style within files
-- **Simplicity**: Prefer straightforward solutions over complex abstractions
-- **Documentation**: Add comments for non-obvious logic
-- **Testing**: Include tests for new functionality when applicable
+**JavaScript:**
+- ES6+ syntax (const/let, arrow functions, template literals)
+- Descriptive function and variable names
+- Event delegation for dynamic content
+- Data-driven rendering
 
-### Git Workflow
-
-- **Branch naming**: Use descriptive branch names (e.g., `feature/add-login`, `fix/validation-bug`)
-- **Commit messages**: Write clear, concise commit messages describing the change
-- **Pull requests**: Include description of changes and any relevant context
+**HTML:**
+- Semantic elements (nav, main, aside, header, etc.)
+- Accessibility attributes where needed
+- Clean indentation (2 spaces)
 
 ## AI Assistant Instructions
 
 ### General Principles
 
 1. **Read before modifying**: Always read existing files before making changes
-2. **Minimal changes**: Make only the changes requested; avoid over-engineering
-3. **Preserve style**: Match existing code conventions and formatting
-4. **Security first**: Never introduce security vulnerabilities (XSS, SQL injection, etc.)
+2. **Minimal changes**: Make only the changes requested
+3. **Preserve style**: Match existing code conventions
+4. **Security first**: Sanitize user input, prevent XSS
 
-### When Working on Tasks
+### Design System
 
-1. Understand the request fully before starting
-2. Explore relevant parts of the codebase
-3. Plan the implementation approach
-4. Make focused, targeted changes
-5. Verify changes work as expected
+The project uses a consistent design system defined in CSS variables:
 
-### What to Avoid
+**Colors:**
+- Primary: `#6366f1` (Indigo)
+- Success: `#10b981` (Green)
+- Warning: `#f59e0b` (Amber)
+- Danger: `#ef4444` (Red)
+- Info: `#3b82f6` (Blue)
 
-- Adding unnecessary features beyond what's requested
-- Creating documentation files unless explicitly asked
-- Making "improvements" to code not related to the task
-- Using placeholder values or guessing at implementation details
+**Spacing & Sizing:**
+- Border radius: `12px` (default), `8px` (small), `16px` (large)
+- Sidebar width: `280px`
+- Header height: `70px`
 
-## Build & Run Commands
-
-*To be updated as project develops*
-
-```bash
-# Example commands (update when applicable):
-# npm install        # Install dependencies
-# npm run dev        # Run development server
-# npm run build      # Build for production
-# npm test           # Run tests
-```
-
-## Testing
-
-*To be updated when testing framework is established*
-
-- Run tests before committing changes
-- Add tests for new functionality
-- Maintain existing test coverage
-
-## Architecture Notes
-
-*To be documented as the project architecture takes shape*
+**Typography:**
+- Font family: Inter
+- Base size: 14px
 
 ### Key Components
 
-- (To be defined)
+| Component | Location | Description |
+|-----------|----------|-------------|
+| Sidebar | `.sidebar` | Navigation menu with user profile |
+| Stats Cards | `.stats-grid` | Overview statistics display |
+| Data Table | `.data-table` | Main requests table with actions |
+| Filters | `.table-filters` | Search and filter controls |
+| Pagination | `.table-pagination` | Page navigation |
 
-### Data Flow
+### Data Structure
 
-- (To be defined)
+Request objects follow this structure:
 
-### External Dependencies
+```javascript
+{
+    id: 130,
+    company: "Company Name",
+    applicant: "Person Name",
+    email: "email@example.com",
+    phone: "+1 (555) 123-4567",
+    regDate: "01/30/2026",
+    docsComplete: 0,
+    docsTotal: 2,
+    status: "new|in-progress|approved|rejected",
+    assigned: "BA|KD"
+}
+```
 
-- (To be defined)
+### Adding New Features
+
+1. **New status type**: Add to CSS (`.status-badge.newstatus`) and JS (`getStatusLabel()`)
+2. **New table column**: Update HTML thead, CSS, and `renderTableRow()` in JS
+3. **New filter**: Add select option in HTML, handle in `filterData()` function
+4. **New action button**: Add to actions-cell template, handle click in event delegation
 
 ## Common Tasks
 
-### Adding a New Feature
+### Modifying Colors
 
-1. Create a feature branch
-2. Implement the feature with appropriate tests
-3. Update documentation if needed
-4. Submit for review
+Edit CSS variables in `:root` selector in `styles.css`:
 
-### Fixing a Bug
+```css
+:root {
+    --primary: #6366f1;
+    /* ... */
+}
+```
 
-1. Reproduce the issue
-2. Identify root cause
-3. Implement fix with minimal changes
-4. Add test to prevent regression
+### Adding Table Data
 
-## Environment Setup
+Add objects to `requestsData` array in `script.js`
 
-*To be documented based on project requirements*
+### Changing Layout
 
-### Required Tools
+- Sidebar width: `--sidebar-width` in CSS
+- Stats grid columns: `.stats-grid` grid-template-columns
+- Table columns: Update `<th>` elements and corresponding `<td>` in render function
 
-- Git
-- (Additional tools TBD)
+## Browser Support
 
-### Environment Variables
-
-- (To be documented as needed)
+- Modern browsers (Chrome, Firefox, Safari, Edge)
+- CSS Grid and Flexbox required
+- ES6+ JavaScript support required
 
 ## Troubleshooting
 
-*Common issues and solutions will be documented here as they arise*
+| Issue | Solution |
+|-------|----------|
+| Fonts not loading | Check internet connection for Google Fonts |
+| Icons missing | Verify Font Awesome CDN link |
+| Avatars not showing | UI Avatars API requires internet |
+| Mobile menu not working | Check JavaScript console for errors |
 
 ---
 
@@ -142,8 +181,9 @@ When adding code to this repository, follow these principles:
 
 | Date | Description |
 |------|-------------|
-| 2026-01-30 | Initial CLAUDE.md created for empty repository |
+| 2026-01-30 | Initial CLAUDE.md created |
+| 2026-01-30 | Added HR Portal UI (HTML, CSS, JS) |
 
 ---
 
-*This document should be updated as the project evolves to reflect current architecture, conventions, and workflows.*
+*This document should be updated as the project evolves.*
