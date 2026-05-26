@@ -1,415 +1,447 @@
 // ============================================
-// HR Portal - JavaScript
+// Pesocnica Pay — Crypto Card Wallet
+// Vanilla JS, no build step. Mock on-chain data.
 // ============================================
 
-// Sample Data
-const requestsData = [
-    {
-        id: 130,
-        company: "SoCal Republic",
-        applicant: "Steve Alpizar",
-        email: "alpizarsteve@yahoo.com",
-        phone: "+1 (951) 416-9589",
-        regDate: "01/30/2026",
-        docsComplete: 0,
-        docsTotal: 2,
-        status: "new",
-        assigned: "BA"
-    },
-    {
-        id: 128,
-        company: "Sortico Logistics Delivery",
-        applicant: "Thomas Blagogie",
-        email: "tomablaco@yahoo.com",
-        phone: "+1 (443) 813-3291",
-        regDate: "01/30/2026",
-        docsComplete: 0,
-        docsTotal: 2,
-        status: "in-progress",
-        assigned: "KD"
-    },
-    {
-        id: 127,
-        company: "Olamob Transportation",
-        applicant: "Mobolaji Olarewaju",
-        email: "Olamob2000@yahoo.com",
-        phone: "+1 (773) 459-8287",
-        regDate: "01/29/2026",
-        docsComplete: 0,
-        docsTotal: 2,
-        status: "in-progress",
-        assigned: "BA"
-    },
-    {
-        id: 126,
-        company: "G V M Services",
-        applicant: "Jorge Orellana",
-        email: "Chusinorellana@hotmail.com",
-        phone: "+1 (203) 887-0759",
-        regDate: "01/29/2026",
-        docsComplete: 0,
-        docsTotal: 2,
-        status: "in-progress",
-        assigned: "BA"
-    },
-    {
-        id: 125,
-        company: "Omw2U LLC",
-        applicant: "Nancy Monteiro",
-        email: "Omw.2u@icloud.com",
-        phone: "+1 (334) 942-3434",
-        regDate: "01/29/2026",
-        docsComplete: 1,
-        docsTotal: 2,
-        status: "in-progress",
-        assigned: "BA"
-    },
-    {
-        id: 124,
-        company: "Esp Relocators Inc",
-        applicant: "Marcos Espaillat",
-        email: "t0nie27@yahoo.com",
-        phone: "+1 (848) 468-0553",
-        regDate: "01/29/2026",
-        docsComplete: 0,
-        docsTotal: 2,
-        status: "new",
-        assigned: "KD"
-    },
-    {
-        id: 123,
-        company: "Brotherly Hustle Haulers",
-        applicant: "Trevon Seymour",
-        email: "Trevon@brotherlyhustle.com",
-        phone: "+1 (914) 435-4563",
-        regDate: "01/29/2026",
-        docsComplete: 0,
-        docsTotal: 2,
-        status: "in-progress",
-        assigned: "KD"
-    },
-    {
-        id: 122,
-        company: "Freya S Multi Services LLC",
-        applicant: "Djimmy Salomon",
-        email: "keyantenewstart@yahoo.com",
-        phone: "+1 (305) 990-7549",
-        regDate: "01/28/2026",
-        docsComplete: 2,
-        docsTotal: 2,
-        status: "rejected",
-        assigned: "BA"
-    },
-    {
-        id: 121,
-        company: "Maylis H H Trucking Services LLC",
-        applicant: "Felix Horta",
-        email: "mfabrallc@gmail.com",
-        phone: "+1 (402) 270-0212",
-        regDate: "01/28/2026",
-        docsComplete: 2,
-        docsTotal: 2,
-        status: "approved",
-        assigned: "KD"
-    },
-    {
-        id: 120,
-        company: "Verified Expediting",
-        applicant: "Richard Netherwood",
-        email: "comson66@gmail.com",
-        phone: "+1 (210) 895-8444",
-        regDate: "01/28/2026",
-        docsComplete: 1,
-        docsTotal: 2,
-        status: "in-progress",
-        assigned: "KD"
+"use strict";
+
+// ---------- State ----------
+const CURRENCY_SYMBOLS = { EUR: "€", USD: "$", GBP: "£" };
+
+const state = {
+  connected: false,
+  address: null,
+  currency: localStorage.getItem("gp-currency") || "EUR",
+  balance: 0,
+  pending: 0,
+  txFilter: "all",
+  activeCardIndex: 0,
+  cards: [
+    { id: 1, last4: "4821", type: "Physical", frozen: false, brand: false },
+    { id: 2, last4: "9043", type: "Virtual", frozen: false, brand: true },
+  ],
+  // Stored in base currency units; merchant + category drive the icon.
+  transactions: [
+    { merchant: "Spotify", category: "music", amount: -10.99, date: "Today, 09:14", status: "settled" },
+    { merchant: "Add funds", category: "topup", amount: 500.0, date: "Today, 08:02", status: "settled" },
+    { merchant: "Lidl", category: "groceries", amount: -42.18, date: "Yesterday", status: "settled" },
+    { merchant: "Uber", category: "transport", amount: -13.5, date: "Yesterday", status: "pending" },
+    { merchant: "Steam", category: "games", amount: -29.99, date: "May 23", status: "settled" },
+    { merchant: "Salary", category: "topup", amount: 2400.0, date: "May 22", status: "settled" },
+    { merchant: "Amazon", category: "shopping", amount: -76.4, date: "May 21", status: "settled" },
+  ],
+};
+
+const CATEGORY_ICON = {
+  music: "fa-music",
+  topup: "fa-arrow-down",
+  groceries: "fa-basket-shopping",
+  transport: "fa-car",
+  games: "fa-gamepad",
+  shopping: "fa-bag-shopping",
+  default: "fa-receipt",
+};
+
+// ---------- DOM helpers ----------
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function sym() {
+  return CURRENCY_SYMBOLS[state.currency] || "€";
+}
+
+function fmt(amount, withSign = false) {
+  const sign = withSign && amount > 0 ? "+" : amount < 0 ? "-" : "";
+  const value = Math.abs(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${sign}${sym()}${value}`;
+}
+
+// ---------- Rendering ----------
+function renderBalance() {
+  const total = state.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const [int, dec] = total.split(".");
+  $("#balanceAmount").innerHTML =
+    `<span class="balance-int">${sym()}${int}</span><span class="balance-dec">.${dec}</span>`;
+
+  const pendingPill = $("#pendingPill");
+  if (state.pending > 0) {
+    pendingPill.style.display = "inline-flex";
+    $("#pendingAmount").textContent = fmt(state.pending);
+  } else {
+    pendingPill.style.display = "none";
+  }
+}
+
+function renderTransactions() {
+  const list = $("#txList");
+  const items = state.transactions.filter((t) => {
+    if (state.txFilter === "in") return t.amount > 0;
+    if (state.txFilter === "out") return t.amount < 0;
+    return true;
+  });
+
+  if (!state.connected) {
+    list.innerHTML = `<div class="tx-empty">Connect your wallet to see transactions</div>`;
+    return;
+  }
+  if (items.length === 0) {
+    list.innerHTML = `<div class="tx-empty">No transactions yet</div>`;
+    return;
+  }
+
+  list.innerHTML = items
+    .map((t) => {
+      const isIn = t.amount > 0;
+      const icon = CATEGORY_ICON[t.category] || CATEGORY_ICON.default;
+      const amountClass = t.status === "pending" ? "pending" : isIn ? "in" : "";
+      const sub = t.status === "pending" ? `${t.date} · Pending` : t.date;
+      return `
+        <div class="tx-item">
+          <div class="tx-icon ${isIn ? "in" : ""}"><i class="fa-solid ${icon}"></i></div>
+          <div class="tx-main">
+            <div class="tx-merchant">${escapeHtml(t.merchant)}</div>
+            <div class="tx-sub">${escapeHtml(sub)}</div>
+          </div>
+          <div class="tx-amount ${amountClass}">${fmt(t.amount, true)}</div>
+        </div>`;
+    })
+    .join("");
+}
+
+function renderMiniCards() {
+  const wrap = $("#cardMiniList");
+  wrap.innerHTML =
+    state.cards
+      .map(
+        (c) => `
+      <button class="card-mini" data-card="${c.id}">
+        <div class="card-thumb ${c.brand ? "brandgrad" : ""} ${c.frozen ? "frozen" : ""}">
+          <span class="chip-icon"></span>
+        </div>
+        <div class="card-mini-info">
+          <div class="card-mini-num"><span class="mono">••• ${c.last4}</span></div>
+          <div class="card-mini-type">${c.type}${c.frozen ? " · Frozen" : ""}</div>
+        </div>
+      </button>`
+      )
+      .join("") +
+    `<button class="card-add" data-action="add-card">
+      <span class="plus"><i class="fa-solid fa-plus"></i></span> Order a new card
+    </button>`;
+}
+
+function renderCarousel() {
+  const wrap = $("#carousel");
+  wrap.innerHTML = state.cards
+    .map(
+      (c) => `
+    <div class="credit-card ${c.brand ? "brandgrad" : ""} ${c.frozen ? "frozen" : ""}">
+      <div class="cc-top">
+        <span class="cc-brand">Pesocnica<span style="opacity:.6">Pay</span></span>
+        <i class="fa-brands fa-bluetooth" style="opacity:0"></i>
+      </div>
+      <div class="cc-chip"></div>
+      <div class="cc-number mono">••••  ••••  ••••  ${c.last4}</div>
+      <div class="cc-bottom">
+        <div>
+          <div class="cc-label">Card holder</div>
+          <div>${c.type === "Virtual" ? "Virtual card" : "Main card"}</div>
+        </div>
+        <div class="cc-network">VISA</div>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  renderCardControls();
+}
+
+function renderCardControls() {
+  const card = state.cards[state.activeCardIndex] || state.cards[0];
+  $("#cardControls").innerHTML = `
+    <button class="cc-action ${card.frozen ? "active" : ""}" data-action="freeze">
+      <span class="ico"><i class="fa-solid fa-snowflake"></i></span>
+      ${card.frozen ? "Unfreeze" : "Freeze"}
+    </button>
+    <button class="cc-action" data-action="details">
+      <span class="ico"><i class="fa-regular fa-eye"></i></span>
+      Show PIN
+    </button>
+    <button class="cc-action" data-action="settings">
+      <span class="ico"><i class="fa-solid fa-sliders"></i></span>
+      Settings
+    </button>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Navigation ----------
+function switchView(view) {
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  $$("[data-view]").forEach((el) => {
+    if (el.classList.contains("top-nav-link") || el.classList.contains("footer-link")) {
+      el.classList.toggle("active", el.dataset.view === view);
     }
-];
-
-// Color palette for company avatars
-const avatarColors = [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#ef4444',
-    '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
-    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6'
-];
-
-// Utility Functions
-function getInitials(name) {
-    return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function getRandomColor(seed) {
-    const index = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return avatarColors[index % avatarColors.length];
+// ---------- Wallet (mock) ----------
+function randomAddress() {
+  const hex = "0123456789abcdef";
+  let a = "0x";
+  for (let i = 0; i < 40; i++) a += hex[Math.floor(Math.random() * 16)];
+  return a;
 }
 
-function getStatusLabel(status) {
-    const labels = {
-        'new': 'New',
-        'in-progress': 'In Progress',
-        'approved': 'Approved',
-        'rejected': 'Rejected'
-    };
-    return labels[status] || status;
+function shorten(addr) {
+  return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
 }
 
-// Render Table Row
-function renderTableRow(request) {
-    const companyInitials = getInitials(request.company);
-    const companyColor = getRandomColor(request.company);
-    const docsClass = request.docsComplete === request.docsTotal ? 'complete' : 'incomplete';
-
-    return `
-        <tr data-id="${request.id}">
-            <td>
-                <input type="checkbox" class="checkbox row-checkbox">
-            </td>
-            <td>
-                <span class="id-badge">${request.id}</span>
-            </td>
-            <td>
-                <div class="company-cell">
-                    <div class="company-avatar" style="background: ${companyColor}">
-                        ${companyInitials}
-                    </div>
-                    <span class="company-name">${request.company}</span>
-                </div>
-            </td>
-            <td>
-                <div class="applicant-cell">
-                    <img class="applicant-avatar"
-                         src="https://ui-avatars.com/api/?name=${encodeURIComponent(request.applicant)}&background=e2e8f0&color=475569&size=32"
-                         alt="${request.applicant}">
-                    <span class="applicant-name">${request.applicant}</span>
-                </div>
-            </td>
-            <td>
-                <div class="contact-cell">
-                    <span class="contact-email">${request.email}</span>
-                    <span class="contact-phone">${request.phone}</span>
-                </div>
-            </td>
-            <td>
-                <span class="date-cell">${request.regDate}</span>
-            </td>
-            <td>
-                <div class="docs-cell">
-                    <span class="docs-badge ${docsClass}">
-                        <i class="fas fa-file-alt"></i>
-                        ${request.docsComplete}/${request.docsTotal}
-                    </span>
-                </div>
-            </td>
-            <td>
-                <span class="status-badge ${request.status}">
-                    <span class="status-dot"></span>
-                    ${getStatusLabel(request.status)}
-                </span>
-            </td>
-            <td>
-                <div class="assigned-cell">
-                    <span class="assigned-badge ${request.assigned.toLowerCase()}">
-                        ${request.assigned}
-                    </span>
-                </div>
-            </td>
-            <td>
-                <div class="actions-cell">
-                    <button class="action-btn" data-tooltip="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn" data-tooltip="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete" data-tooltip="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
+function connect() {
+  state.connected = true;
+  state.address = randomAddress();
+  state.balance = 4827.61;
+  state.pending = 13.5;
+  updateConnectedUI();
+  renderBalance();
+  renderTransactions();
+  toast("Wallet connected", "fa-circle-check");
 }
 
-// Render Table
-function renderTable(data) {
-    const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = data.map(renderTableRow).join('');
+function disconnect() {
+  state.connected = false;
+  state.address = null;
+  state.balance = 0;
+  state.pending = 0;
+  updateConnectedUI();
+  renderBalance();
+  renderTransactions();
+  switchView("home");
+  toast("Wallet disconnected", "fa-circle-info");
 }
 
-// Filter Data
-function filterData(searchTerm, statusFilter) {
-    return requestsData.filter(request => {
-        const matchesSearch = searchTerm === '' ||
-            request.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.applicant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.phone.includes(searchTerm);
-
-        const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-
-        return matchesSearch && matchesStatus;
-    });
+function updateConnectedUI() {
+  $("#connectLabel").textContent = state.connected ? shorten(state.address) : "Connect wallet";
+  $("#accountName").textContent = state.connected ? "Pesocnica user" : "Not connected";
+  $("#accountAddr").textContent = state.connected ? state.address : "—";
+  $("#safeAddr").textContent = state.connected ? shorten(randomSafe()) : "—";
+  $("#accountAvatar").textContent = state.connected ? "P" : "?";
 }
 
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Initial render
-    renderTable(requestsData);
+let _safe = null;
+function randomSafe() {
+  if (!_safe) _safe = randomAddress();
+  return _safe;
+}
 
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const statusFilter = document.getElementById('statusFilter');
+// ---------- Modal ----------
+let modalMode = "send";
+function openModal(mode) {
+  if (!state.connected) {
+    toast("Connect your wallet first", "fa-triangle-exclamation", true);
+    return;
+  }
+  modalMode = mode;
+  const isSend = mode === "send";
+  $("#modalTitle").textContent = isSend ? "Send funds" : "Add funds";
+  $("#modalFieldLabel").textContent = isSend ? "Recipient address" : "From address";
+  $("#modalInput1").value = isSend ? "" : randomAddress();
+  $("#modalInput1").placeholder = "0x…";
+  $("#modalAmount").value = "";
+  $("#amountPrefix").textContent = sym();
+  $("#modalHint").textContent = isSend ? `Available: ${fmt(state.balance)}` : "Funds arrive after on-chain confirmation.";
+  $("#modalHint").classList.remove("error");
+  $("#modalOverlay").classList.add("open");
+  $("#modalAmount").focus();
+}
 
-    searchInput.addEventListener('input', (e) => {
-        const filtered = filterData(e.target.value, statusFilter.value);
-        renderTable(filtered);
+function closeModal() {
+  $("#modalOverlay").classList.remove("open");
+}
+
+function confirmModal() {
+  const amount = parseFloat($("#modalAmount").value);
+  const hint = $("#modalHint");
+  if (!amount || amount <= 0) {
+    hint.textContent = "Enter a valid amount.";
+    hint.classList.add("error");
+    return;
+  }
+  if (modalMode === "send" && amount > state.balance) {
+    hint.textContent = "Amount exceeds available balance.";
+    hint.classList.add("error");
+    return;
+  }
+
+  if (modalMode === "send") {
+    state.balance -= amount;
+    state.transactions.unshift({
+      merchant: "Sent " + shorten($("#modalInput1").value || randomAddress()),
+      category: "transport",
+      amount: -amount,
+      date: "Just now",
+      status: "pending",
     });
-
-    statusFilter.addEventListener('change', (e) => {
-        const filtered = filterData(searchInput.value, e.target.value);
-        renderTable(filtered);
+    toast(`Sent ${fmt(amount)}`, "fa-paper-plane");
+  } else {
+    state.balance += amount;
+    state.transactions.unshift({
+      merchant: "Add funds",
+      category: "topup",
+      amount: amount,
+      date: "Just now",
+      status: "settled",
     });
+    toast(`Added ${fmt(amount)}`, "fa-circle-check");
+  }
+  renderBalance();
+  renderTransactions();
+  closeModal();
+}
 
-    // Select all checkbox
-    const selectAll = document.getElementById('selectAll');
-    selectAll.addEventListener('change', (e) => {
-        const checkboxes = document.querySelectorAll('.row-checkbox');
-        checkboxes.forEach(cb => cb.checked = e.target.checked);
-    });
+// ---------- Theme ----------
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("gp-theme", theme);
+  const icon = $("#themeToggle").querySelector("i");
+  icon.className = theme === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
+  const darkSwitch = $("#darkSwitch");
+  if (darkSwitch) darkSwitch.checked = theme === "dark";
+}
 
-    // Mobile menu toggle
-    const menuToggle = document.querySelector('.menu-toggle');
-    const sidebar = document.querySelector('.sidebar');
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme");
+  applyTheme(current === "dark" ? "light" : "dark");
+}
 
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
-    });
+// ---------- Toast ----------
+function toast(msg, icon = "fa-circle-check", isError = false) {
+  const el = document.createElement("div");
+  el.className = "toast" + (isError ? " error" : "");
+  el.innerHTML = `<i class="fa-solid ${icon}"></i> ${escapeHtml(msg)}`;
+  $("#toastWrap").appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transform = "translateX(20px)";
+    el.style.transition = "all 0.25s ease";
+    setTimeout(() => el.remove(), 250);
+  }, 2600);
+}
 
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 992 &&
-            !sidebar.contains(e.target) &&
-            !menuToggle.contains(e.target)) {
-            sidebar.classList.remove('open');
-        }
-    });
+// ---------- Clipboard ----------
+async function copyAddress() {
+  if (!state.address) {
+    toast("Connect your wallet first", "fa-triangle-exclamation", true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(state.address);
+    toast("Address copied", "fa-copy");
+  } catch {
+    toast("Could not copy", "fa-triangle-exclamation", true);
+  }
+}
 
-    // Sortable columns
-    const sortableHeaders = document.querySelectorAll('.sortable');
-    sortableHeaders.forEach(header => {
-        header.addEventListener('click', () => {
-            const sortKey = header.dataset.sort;
-            // Toggle sort direction
-            const currentDirection = header.dataset.direction || 'asc';
-            const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-            header.dataset.direction = newDirection;
-
-            // Update icon
-            const icon = header.querySelector('i');
-            icon.className = newDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
-
-            // Sort data
-            const sortedData = [...requestsData].sort((a, b) => {
-                let valA, valB;
-                switch(sortKey) {
-                    case 'id':
-                        valA = a.id;
-                        valB = b.id;
-                        break;
-                    case 'company':
-                        valA = a.company.toLowerCase();
-                        valB = b.company.toLowerCase();
-                        break;
-                    case 'date':
-                        valA = new Date(a.regDate);
-                        valB = new Date(b.regDate);
-                        break;
-                    default:
-                        return 0;
-                }
-
-                if (valA < valB) return newDirection === 'asc' ? -1 : 1;
-                if (valA > valB) return newDirection === 'asc' ? 1 : -1;
-                return 0;
-            });
-
-            renderTable(sortedData);
-        });
-    });
-
-    // Pagination click handlers
-    const paginationBtns = document.querySelectorAll('.btn-pagination');
-    paginationBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.disabled) return;
-
-            // Remove active from all
-            paginationBtns.forEach(b => b.classList.remove('active'));
-
-            // Add active to clicked (if it's a number button)
-            if (!btn.querySelector('i')) {
-                btn.classList.add('active');
-            }
-        });
-    });
-
-    // Row action handlers
-    document.getElementById('tableBody').addEventListener('click', (e) => {
-        const actionBtn = e.target.closest('.action-btn');
-        if (!actionBtn) return;
-
-        const row = e.target.closest('tr');
-        const id = row.dataset.id;
-
-        if (actionBtn.classList.contains('delete')) {
-            if (confirm('Are you sure you want to delete this request?')) {
-                row.style.animation = 'fadeOut 0.3s ease-out forwards';
-                setTimeout(() => row.remove(), 300);
-            }
-        } else if (actionBtn.querySelector('.fa-eye')) {
-            console.log('View details for request:', id);
-            // Show modal or navigate to details page
-        } else if (actionBtn.querySelector('.fa-edit')) {
-            console.log('Edit request:', id);
-            // Open edit form
-        }
-    });
-
-    // Add Request button
-    const addRequestBtn = document.querySelector('.btn-primary');
-    addRequestBtn.addEventListener('click', () => {
-        console.log('Open add request modal');
-        // Open add request modal/form
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        // Ctrl+K for search focus
-        if (e.ctrlKey && e.key === 'k') {
-            e.preventDefault();
-            searchInput.focus();
-        }
-
-        // Escape to close sidebar on mobile
-        if (e.key === 'Escape') {
-            sidebar.classList.remove('open');
-        }
-    });
-});
-
-// Add fadeOut animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fadeOut {
-        to {
-            opacity: 0;
-            transform: translateX(-20px);
-        }
+// ---------- Events ----------
+function bindEvents() {
+  // View navigation (header brand, top nav, footer nav, inline links)
+  document.addEventListener("click", (e) => {
+    const navEl = e.target.closest("[data-view]");
+    if (navEl) {
+      e.preventDefault();
+      switchView(navEl.dataset.view);
+      return;
     }
-`;
-document.head.appendChild(style);
+
+    const miniCard = e.target.closest("[data-card]");
+    if (miniCard) {
+      const idx = state.cards.findIndex((c) => c.id === Number(miniCard.dataset.card));
+      state.activeCardIndex = Math.max(0, idx);
+      switchView("cards");
+      renderCardControls();
+      return;
+    }
+
+    const actionEl = e.target.closest("[data-action]");
+    if (actionEl) handleAction(actionEl.dataset.action);
+  });
+
+  $("#connectBtn").addEventListener("click", () => (state.connected ? switchView("account") : connect()));
+  $("#disconnectBtn").addEventListener("click", disconnect);
+  $("#themeToggle").addEventListener("click", toggleTheme);
+  $("#darkSwitch").addEventListener("change", (e) => applyTheme(e.target.checked ? "dark" : "light"));
+  $("#copyAddrBtn").addEventListener("click", copyAddress);
+
+  $("#sendFundsBtn").addEventListener("click", () => openModal("send"));
+  $("#addFundsBtn").addEventListener("click", () => openModal("add"));
+  $("#modalClose").addEventListener("click", closeModal);
+  $("#modalCancel").addEventListener("click", closeModal);
+  $("#modalConfirm").addEventListener("click", confirmModal);
+  $("#modalOverlay").addEventListener("click", (e) => {
+    if (e.target === $("#modalOverlay")) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  // Transaction filters
+  $$("[data-txfilter]").forEach((chip) =>
+    chip.addEventListener("click", () => {
+      state.txFilter = chip.dataset.txfilter;
+      $$("[data-txfilter]").forEach((c) => c.classList.toggle("active", c === chip));
+      renderTransactions();
+    })
+  );
+
+  // Currency
+  $("#currencySelect").addEventListener("change", (e) => {
+    state.currency = e.target.value;
+    localStorage.setItem("gp-currency", state.currency);
+    renderBalance();
+    renderTransactions();
+  });
+}
+
+function handleAction(action) {
+  switch (action) {
+    case "freeze": {
+      const card = state.cards[state.activeCardIndex];
+      card.frozen = !card.frozen;
+      renderCarousel();
+      renderMiniCards();
+      toast(card.frozen ? "Card frozen" : "Card unfrozen", card.frozen ? "fa-snowflake" : "fa-fire");
+      break;
+    }
+    case "details":
+      toast("PIN: 4827 (demo)", "fa-eye");
+      break;
+    case "settings":
+      toast("Card settings — coming soon", "fa-sliders");
+      break;
+    case "add-card":
+      toast("Card order flow — coming soon", "fa-plus");
+      break;
+  }
+}
+
+// ---------- Init ----------
+function init() {
+  applyTheme(localStorage.getItem("gp-theme") || "light");
+  $("#currencySelect").value = state.currency;
+  bindEvents();
+  renderBalance();
+  renderTransactions();
+  renderMiniCards();
+  renderCarousel();
+  updateConnectedUI();
+}
+
+document.addEventListener("DOMContentLoaded", init);
