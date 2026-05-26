@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pesocnica Pay — Crypto Card Wallet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* ============================================
+       Pesocnica Pay — Crypto Card Wallet
+       Design system inspired by Gnosis Pay
+       ============================================ */
+
+    /* ---------- Design tokens ---------- */
+    :root {
+      --brand-600: #bbcb4b;
+      --brand-500: #cddf52;
+      --brand-400: #e4eea1;
+      --brand-300: #f6f9e0;
+      --success-600: #388e3c;
+      --success-500: #00b460;
+      --warning-600: #e34510;
+      --warning-500: #ff8061;
+      --error-600: #c53030;
+      --error-500: #ed7070;
+      --info-500: #5fddff;
+      --neutral-900: #000000;
+      --neutral-800: #121211;
+      --neutral-700: #1b1b1a;
+      --neutral-600: #30302f;
+      --neutral-500: #666564;
+      --neutral-400: #a3a2a0;
+      --neutral-300: #e0dfdc;
+      --neutral-200: #f0eeeb;
+      --neutral-100: #f5f3f0;
+      --neutral-50: #ffffff;
+      --background: var(--neutral-100);
+      --foreground: var(--neutral-900);
+      --card: var(--neutral-50);
+      --muted-bg: var(--neutral-200);
+      --primary: var(--neutral-900);
+      --primary-fg: var(--neutral-50);
+      --secondary: var(--neutral-500);
+      --border: var(--neutral-300);
+      --brand: var(--brand-500);
+      --brand-hover: var(--brand-600);
+      --on-brand: var(--neutral-900);
+      --success: var(--success-600);
+      --warning: var(--warning-600);
+      --error: var(--error-600);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --radius-lg: 20px;
+      --header-h: 68px;
+      --maxw: 1080px;
+    }
+
+    html[data-theme="dark"] {
+      --background: var(--neutral-800);
+      --foreground: var(--neutral-50);
+      --card: var(--neutral-700);
+      --muted-bg: var(--neutral-600);
+      --primary: var(--neutral-50);
+      --primary-fg: var(--neutral-900);
+      --secondary: var(--neutral-400);
+      --border: var(--neutral-600);
+      --on-brand: var(--neutral-900);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    /* ---------- Base ---------- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "DM Sans", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.01em; }
+    .muted { color: var(--secondary); }
+    .small { font-size: 0.8125rem; }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: none; border-radius: 999px; padding: 11px 20px;
+      font-size: 0.9375rem; font-weight: 500;
+      transition: transform 0.06s ease, background 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-brand { background: var(--brand); color: var(--on-brand); }
+    .btn-brand:hover { background: var(--brand-hover); }
+    .btn-dark { background: var(--primary); color: var(--primary-fg); }
+    .btn-dark:hover { opacity: 0.88; }
+    .btn-ghost { background: var(--muted-bg); color: var(--foreground); }
+    .btn-ghost:hover { opacity: 0.85; }
+    .btn-ghost-danger { background: transparent; color: var(--error); border: 1px solid var(--border); }
+    .btn-ghost-danger:hover { background: var(--muted-bg); }
+    .btn.full { width: 100%; }
+
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--card); color: var(--foreground);
+      font-size: 0.95rem; transition: background 0.15s ease;
+    }
+    .icon-btn:hover { background: var(--muted-bg); }
+
+    .chip {
+      border: 1px solid var(--border); background: transparent; color: var(--secondary);
+      border-radius: 999px; padding: 5px 14px; font-size: 0.8125rem; font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .chip:hover { color: var(--foreground); }
+    .chip.active { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+
+    .link { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; font-weight: 500; color: var(--secondary); }
+    .link:hover { color: var(--foreground); }
+
+    /* ---------- Header ---------- */
+    .header {
+      position: sticky; top: 0; z-index: 50; height: var(--header-h);
+      background: color-mix(in srgb, var(--background) 88%, transparent);
+      backdrop-filter: saturate(180%) blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: var(--maxw); margin: 0 auto; height: 100%; padding: 0 20px;
+      display: flex; align-items: center; gap: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.125rem; }
+    .brand-mark {
+      display: grid; place-items: center; width: 34px; height: 34px;
+      border-radius: 10px; background: var(--brand); color: var(--neutral-900);
+    }
+    .brand-accent { color: var(--secondary); font-weight: 500; margin-left: 2px; }
+
+    .top-nav { display: flex; gap: 4px; margin-left: 8px; }
+    .top-nav-link {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+      border-radius: 999px; font-size: 0.9rem; font-weight: 500; color: var(--secondary);
+      transition: all 0.15s ease;
+    }
+    .top-nav-link:hover { color: var(--foreground); background: var(--muted-bg); }
+    .top-nav-link.active { color: var(--foreground); background: var(--muted-bg); }
+
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* ---------- Main / layout ---------- */
+    .main { max-width: var(--maxw); margin: 0 auto; padding: 28px 20px 96px; }
+    .view { display: none; animation: fade 0.25s ease; }
+    .view.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .layout { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; align-items: start; }
+    .col-main, .col-side { display: flex; flex-direction: column; gap: 20px; }
+    .view-narrow { max-width: 560px; margin: 0 auto; }
+    .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; }
+
+    /* ---------- Block ---------- */
+    .block {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow);
+    }
+    .block-title { font-size: 1rem; font-weight: 700; }
+    .block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+
+    /* ---------- Balance ---------- */
+    .balance-amount { font-size: 2.75rem; font-weight: 700; line-height: 1.1; margin: 10px 0 6px; letter-spacing: -0.02em; }
+    .balance-amount .balance-dec { color: var(--secondary); }
+    .balance-meta { display: flex; gap: 8px; flex-wrap: wrap; min-height: 24px; }
+    .meta-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--secondary); }
+    .meta-pill i { font-size: 0.8rem; }
+    .action-row { display: flex; gap: 12px; margin-top: 18px; }
+    .action-row .btn { flex: 1; }
+
+    /* ---------- Transactions ---------- */
+    .tx-filters { display: flex; gap: 6px; }
+    .tx-list { display: flex; flex-direction: column; }
+    .tx-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--border); }
+    .tx-item:first-child { border-top: none; }
+    .tx-icon {
+      flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--muted-bg); color: var(--secondary); font-size: 1rem;
+    }
+    .tx-icon.in { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+    .tx-main { flex: 1; min-width: 0; }
+    .tx-merchant { font-weight: 500; font-size: 0.9375rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tx-sub { font-size: 0.8125rem; color: var(--secondary); }
+    .tx-amount { font-weight: 700; font-size: 0.9375rem; white-space: nowrap; }
+    .tx-amount.in { color: var(--success); }
+    .tx-amount.pending { color: var(--warning); }
+    .tx-empty { text-align: center; color: var(--secondary); padding: 28px 0; font-size: 0.9rem; }
+
+    /* ---------- Rewards ---------- */
+    .rewards-card { background: linear-gradient(135deg, var(--brand-400), var(--brand)); border-radius: var(--radius-sm); padding: 18px; color: var(--neutral-900); }
+    .rewards-rate { font-size: 2.25rem; font-weight: 700; line-height: 1; }
+    .rewards-card .muted { color: rgba(0, 0, 0, 0.6); }
+    .rewards-earned { margin-top: 14px; font-size: 0.875rem; color: rgba(0, 0, 0, 0.7); display: flex; justify-content: space-between; align-items: center; }
+    .rewards-earned strong { font-size: 1rem; color: var(--neutral-900); }
+
+    /* ---------- Mini card list ---------- */
+    .card-mini-list { display: flex; flex-direction: column; gap: 4px; }
+    .card-mini {
+      display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+      background: transparent; border: none; border-radius: var(--radius-sm); padding: 10px; transition: background 0.15s ease;
+    }
+    .card-mini:hover { background: var(--muted-bg); }
+    .card-thumb { position: relative; width: 64px; height: 42px; border-radius: 7px; flex-shrink: 0; overflow: hidden; background: linear-gradient(135deg, #2b2b2b, #000); }
+    .card-thumb.brandgrad { background: linear-gradient(135deg, var(--brand-600), #6b7a1f); }
+    .card-thumb .chip-icon { position: absolute; top: 8px; left: 8px; width: 12px; height: 9px; border-radius: 2px; background: rgba(255,255,255,0.7); }
+    .card-thumb.frozen::after {
+      content: "\f2dc"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: rgba(95, 221, 255, 0.35); color: #fff; backdrop-filter: blur(1px);
+    }
+    .card-mini-info { display: flex; flex-direction: column; gap: 2px; }
+    .card-mini-num { font-size: 0.9rem; font-weight: 500; }
+    .card-mini-type { font-size: 0.8125rem; color: var(--secondary); }
+    .card-add {
+      display: flex; align-items: center; gap: 14px; width: 100%;
+      background: transparent; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+      padding: 12px; color: var(--secondary); font-weight: 500; font-size: 0.9rem; margin-top: 4px; transition: all 0.15s ease;
+    }
+    .card-add:hover { color: var(--foreground); border-color: var(--secondary); }
+    .card-add .plus { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; background: var(--muted-bg); }
+
+    /* ---------- Carousel ---------- */
+    .carousel { display: flex; gap: 16px; overflow-x: auto; padding: 4px 4px 18px; scroll-snap-type: x mandatory; }
+    .carousel::-webkit-scrollbar { height: 6px; }
+    .carousel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+    .credit-card {
+      scroll-snap-align: center; flex: 0 0 320px; aspect-ratio: 1.586; border-radius: var(--radius-lg);
+      padding: 22px; color: #fff; position: relative;
+      background: linear-gradient(135deg, #1b1b1a 0%, #30302f 100%);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; transition: filter 0.2s ease;
+    }
+    .credit-card.brandgrad { background: linear-gradient(135deg, var(--brand-600) 0%, #4d5a14 100%); color: var(--neutral-900); }
+    .credit-card.frozen { filter: grayscale(0.5) brightness(1.05); }
+    .credit-card.frozen::after {
+      content: "Frozen"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      background: rgba(95, 221, 255, 0.25); padding: 6px 16px; border-radius: 999px;
+      backdrop-filter: blur(2px); border: 1px solid rgba(255,255,255,0.3);
+    }
+    .cc-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .cc-brand { font-weight: 700; letter-spacing: 0.02em; }
+    .cc-chip { width: 38px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #d4af37, #f0d77b); margin-top: 14px; }
+    .cc-number { font-size: 1.15rem; letter-spacing: 0.12em; margin: 10px 0; }
+    .cc-bottom { display: flex; justify-content: space-between; align-items: flex-end; font-size: 0.8rem; }
+    .cc-label { opacity: 0.7; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .cc-network { font-size: 1.4rem; font-weight: 700; font-style: italic; }
+
+    /* ---------- Card controls ---------- */
+    .card-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .cc-action {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 8px; font-size: 0.8125rem; font-weight: 500; color: var(--foreground); transition: all 0.15s ease;
+    }
+    .cc-action:hover { background: var(--muted-bg); }
+    .cc-action .ico { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; background: var(--muted-bg); font-size: 1rem; }
+    .cc-action.active .ico { background: var(--info-500); color: var(--neutral-900); }
+
+    /* ---------- Spending limit ---------- */
+    .limit-bar { height: 10px; background: var(--muted-bg); border-radius: 999px; overflow: hidden; margin: 16px 0 10px; }
+    .limit-fill { height: 100%; width: 42%; background: var(--brand); border-radius: 999px; transition: width 0.4s ease; }
+    .limit-meta { display: flex; justify-content: space-between; font-size: 0.875rem; font-weight: 500; }
+
+    /* ---------- Account ---------- */
+    .account-row { display: flex; align-items: center; gap: 14px; }
+    .account-id { flex: 1; min-width: 0; }
+    .avatar {
+      width: 52px; height: 52px; border-radius: 999px; flex-shrink: 0;
+      display: grid; place-items: center; font-weight: 700; font-size: 1.25rem;
+      background: var(--brand); color: var(--neutral-900);
+    }
+    .account-name { font-weight: 700; font-size: 1.05rem; }
+    .kv { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border); font-size: 0.9375rem; gap: 12px; }
+    .kv:first-of-type { border-top: none; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 0.8125rem; font-weight: 500; }
+    .badge-net { background: var(--muted-bg); color: var(--foreground); }
+    .badge-net i { color: var(--brand-600); font-size: 0.5rem; }
+    .badge-ok { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+    .select { border: 1px solid var(--border); background: var(--card); color: var(--foreground); border-radius: 999px; padding: 7px 14px; font-family: inherit; font-size: 0.875rem; font-weight: 500; }
+    .full { margin-top: 20px; }
+
+    /* ---------- Switch ---------- */
+    .switch { position: relative; display: inline-block; width: 46px; height: 26px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: var(--neutral-300); border-radius: 999px; transition: 0.2s; }
+    .slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: #fff; border-radius: 999px; transition: 0.2s; }
+    .switch input:checked + .slider { background: var(--brand); }
+    .switch input:checked + .slider::before { transform: translateX(20px); }
+
+    /* ---------- Footer nav (mobile) ---------- */
+    .footer-nav {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: color-mix(in srgb, var(--background) 92%, transparent); backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border); padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    }
+    .footer-link { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.7rem; color: var(--secondary); }
+    .footer-link i { font-size: 1.1rem; }
+    .footer-link.active { color: var(--foreground); }
+
+    /* ---------- Modal ---------- */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; animation: fade 0.2s ease; }
+    .modal { background: var(--card); border-radius: var(--radius-lg); width: 100%; max-width: 420px; box-shadow: 0 24px 60px rgba(0,0,0,0.4); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 0; }
+    .modal-header h3 { font-size: 1.125rem; font-weight: 700; }
+    .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+    .modal-footer { display: flex; gap: 12px; padding: 0 20px 20px; }
+    .modal-footer .btn { flex: 1; }
+    .field { display: flex; flex-direction: column; gap: 7px; }
+    .field-label { font-size: 0.8125rem; font-weight: 500; color: var(--secondary); }
+    .input {
+      width: 100%; border: 1px solid var(--border); background: var(--background); color: var(--foreground);
+      border-radius: var(--radius-sm); padding: 12px 14px; font-family: inherit; font-size: 0.95rem; outline: none; transition: border 0.15s ease;
+    }
+    .input:focus { border-color: var(--brand); }
+    .amount-input { position: relative; display: flex; align-items: center; }
+    .amount-prefix { position: absolute; left: 14px; font-weight: 700; color: var(--secondary); }
+    .amount-input .input { padding-left: 30px; }
+    .modal-hint { font-size: 0.8125rem; color: var(--secondary); min-height: 18px; }
+    .modal-hint.error { color: var(--error); }
+
+    /* ---------- Toast ---------- */
+    .toast-wrap { position: fixed; bottom: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: var(--primary); color: var(--primary-fg); padding: 12px 18px; border-radius: var(--radius-sm);
+      font-size: 0.875rem; font-weight: 500; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 10px; animation: slideIn 0.25s ease; max-width: 320px;
+    }
+    .toast i { color: var(--brand); }
+    .toast.error i { color: var(--error-500); }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) {
+      .top-nav { display: none; }
+      .footer-nav { display: flex; }
+      .main { padding: 20px 16px 90px; }
+      .brand-name { display: none; }
+      .balance-amount { font-size: 2.25rem; }
+      .credit-card { flex-basis: 280px; }
+      #connectLabel { display: none; }
+      .header-inner { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ============ HEADER ============ -->
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="#" data-view="home">
+        <span class="brand-mark"><i class="fa-solid fa-bolt"></i></span>
+        <span class="brand-name">Pesocnica<span class="brand-accent">Pay</span></span>
+      </a>
+      <nav class="top-nav">
+        <a href="#" class="top-nav-link active" data-view="home"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="#" class="top-nav-link" data-view="cards"><i class="fa-regular fa-credit-card"></i> Cards</a>
+        <a href="#" class="top-nav-link" data-view="account"><i class="fa-regular fa-user"></i> Account</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme"><i class="fa-solid fa-moon"></i></button>
+        <button class="btn btn-brand" id="connectBtn"><i class="fa-solid fa-wallet"></i> <span id="connectLabel">Connect wallet</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- ============ HOME VIEW ============ -->
+    <section class="view active" id="view-home">
+      <div class="layout">
+        <div class="col-main">
+          <div class="block">
+            <h2 class="block-title">Balance</h2>
+            <div class="balance-amount" id="balanceAmount"><span class="balance-int">€0</span><span class="balance-dec">.00</span></div>
+            <div class="balance-meta">
+              <span class="meta-pill" id="pendingPill"><i class="fa-regular fa-clock"></i> <span id="pendingAmount">€0.00</span> pending</span>
+            </div>
+            <div class="action-row">
+              <button class="btn btn-dark" id="sendFundsBtn"><i class="fa-solid fa-arrow-up"></i> Send funds</button>
+              <button class="btn btn-brand" id="addFundsBtn"><i class="fa-solid fa-plus"></i> Add funds</button>
+            </div>
+          </div>
+          <div class="block">
+            <div class="block-header">
+              <h2 class="block-title">Transactions</h2>
+              <div class="tx-filters">
+                <button class="chip active" data-txfilter="all">All</button>
+                <button class="chip" data-txfilter="in">In</button>
+                <button class="chip" data-txfilter="out">Out</button>
+              </div>
+            </div>
+            <div class="tx-list" id="txList"></div>
+          </div>
+        </div>
+        <aside class="col-side">
+          <div class="block">
+            <div class="block-header">
+              <h2 class="block-title">Rewards</h2>
+              <span class="muted small">GNO cashback</span>
+            </div>
+            <div class="rewards-card">
+              <div class="rewards-rate" id="rewardsRate">3%</div>
+              <div class="muted small">on every purchase</div>
+              <div class="rewards-earned">Earned this month <strong id="rewardsEarned">€14.20</strong></div>
+            </div>
+          </div>
+          <div class="block">
+            <div class="block-header">
+              <h2 class="block-title">Cards</h2>
+              <a href="#" class="link" data-view="cards">View details <i class="fa-solid fa-chevron-right"></i></a>
+            </div>
+            <div class="card-mini-list" id="cardMiniList"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ CARDS VIEW ============ -->
+    <section class="view" id="view-cards">
+      <div class="view-narrow">
+        <h1 class="page-title">Your cards</h1>
+        <div class="carousel" id="carousel"></div>
+        <div class="card-controls" id="cardControls"></div>
+        <div class="block">
+          <h2 class="block-title">Spending limit</h2>
+          <div class="limit-bar"><div class="limit-fill" id="limitFill"></div></div>
+          <div class="limit-meta">
+            <span id="limitSpent">€420 spent</span>
+            <span class="muted" id="limitTotal">of €1,000 daily</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ACCOUNT VIEW ============ -->
+    <section class="view" id="view-account">
+      <div class="view-narrow">
+        <h1 class="page-title">Account</h1>
+        <div class="block">
+          <div class="account-row">
+            <div class="avatar" id="accountAvatar">P</div>
+            <div class="account-id">
+              <div class="account-name" id="accountName">Not connected</div>
+              <div class="muted small mono" id="accountAddr">—</div>
+            </div>
+            <button class="icon-btn" id="copyAddrBtn" title="Copy address"><i class="fa-regular fa-copy"></i></button>
+          </div>
+        </div>
+        <div class="block">
+          <h2 class="block-title">Wallet</h2>
+          <div class="kv"><span class="muted">Network</span><span class="badge badge-net"><i class="fa-solid fa-circle"></i> Gnosis Chain</span></div>
+          <div class="kv"><span class="muted">Smart account</span><span class="mono" id="safeAddr">—</span></div>
+          <div class="kv"><span class="muted">KYC status</span><span class="badge badge-ok" id="kycStatus">Verified</span></div>
+        </div>
+        <div class="block">
+          <h2 class="block-title">Preferences</h2>
+          <div class="kv">
+            <span class="muted">Dark mode</span>
+            <label class="switch"><input type="checkbox" id="darkSwitch" /><span class="slider"></span></label>
+          </div>
+          <div class="kv">
+            <span class="muted">Currency</span>
+            <select id="currencySelect" class="select">
+              <option value="EUR">EUR €</option>
+              <option value="USD">USD $</option>
+              <option value="GBP">GBP £</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-ghost-danger full" id="disconnectBtn"><i class="fa-solid fa-right-from-bracket"></i> Disconnect wallet</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER NAV (mobile) ============ -->
+  <nav class="footer-nav">
+    <a href="#" class="footer-link active" data-view="home"><i class="fa-solid fa-house"></i><span>Home</span></a>
+    <a href="#" class="footer-link" data-view="cards"><i class="fa-regular fa-credit-card"></i><span>Cards</span></a>
+    <a href="#" class="footer-link" data-view="account"><i class="fa-regular fa-user"></i><span>Account</span></a>
+  </nav>
+
+  <!-- ============ MODAL ============ -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="modalTitle">Send funds</h3>
+        <button class="icon-btn" id="modalClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <label class="field" id="modalField1">
+          <span class="field-label" id="modalFieldLabel">Recipient address</span>
+          <input type="text" id="modalInput1" class="input" placeholder="0x..." />
+        </label>
+        <label class="field">
+          <span class="field-label">Amount</span>
+          <div class="amount-input">
+            <span class="amount-prefix" id="amountPrefix">€</span>
+            <input type="number" id="modalAmount" class="input" placeholder="0.00" min="0" step="0.01" />
+          </div>
+        </label>
+        <div class="modal-hint" id="modalHint"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+        <button class="btn btn-brand" id="modalConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TOAST ============ -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script>
+    // ============================================
+    // Pesocnica Pay — Crypto Card Wallet
+    // Vanilla JS, single-file. Mock on-chain data.
+    // ============================================
+    "use strict";
+
+    const CURRENCY_SYMBOLS = { EUR: "€", USD: "$", GBP: "£" };
+
+    const state = {
+      connected: false,
+      address: null,
+      currency: localStorage.getItem("gp-currency") || "EUR",
+      balance: 0,
+      pending: 0,
+      txFilter: "all",
+      activeCardIndex: 0,
+      cards: [
+        { id: 1, last4: "4821", type: "Physical", frozen: false, brand: false },
+        { id: 2, last4: "9043", type: "Virtual", frozen: false, brand: true },
+      ],
+      transactions: [
+        { merchant: "Spotify", category: "music", amount: -10.99, date: "Today, 09:14", status: "settled" },
+        { merchant: "Add funds", category: "topup", amount: 500.0, date: "Today, 08:02", status: "settled" },
+        { merchant: "Lidl", category: "groceries", amount: -42.18, date: "Yesterday", status: "settled" },
+        { merchant: "Uber", category: "transport", amount: -13.5, date: "Yesterday", status: "pending" },
+        { merchant: "Steam", category: "games", amount: -29.99, date: "May 23", status: "settled" },
+        { merchant: "Salary", category: "topup", amount: 2400.0, date: "May 22", status: "settled" },
+        { merchant: "Amazon", category: "shopping", amount: -76.4, date: "May 21", status: "settled" },
+      ],
+    };
+
+    const CATEGORY_ICON = {
+      music: "fa-music",
+      topup: "fa-arrow-down",
+      groceries: "fa-basket-shopping",
+      transport: "fa-car",
+      games: "fa-gamepad",
+      shopping: "fa-bag-shopping",
+      default: "fa-receipt",
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    function sym() { return CURRENCY_SYMBOLS[state.currency] || "€"; }
+
+    function fmt(amount, withSign = false) {
+      const sign = withSign && amount > 0 ? "+" : amount < 0 ? "-" : "";
+      const value = Math.abs(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return `${sign}${sym()}${value}`;
+    }
+
+    function renderBalance() {
+      const total = state.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const [int, dec] = total.split(".");
+      $("#balanceAmount").innerHTML = `<span class="balance-int">${sym()}${int}</span><span class="balance-dec">.${dec}</span>`;
+      const pendingPill = $("#pendingPill");
+      if (state.pending > 0) {
+        pendingPill.style.display = "inline-flex";
+        $("#pendingAmount").textContent = fmt(state.pending);
+      } else {
+        pendingPill.style.display = "none";
+      }
+    }
+
+    function renderTransactions() {
+      const list = $("#txList");
+      const items = state.transactions.filter((t) => {
+        if (state.txFilter === "in") return t.amount > 0;
+        if (state.txFilter === "out") return t.amount < 0;
+        return true;
+      });
+      if (!state.connected) {
+        list.innerHTML = `<div class="tx-empty">Connect your wallet to see transactions</div>`;
+        return;
+      }
+      if (items.length === 0) {
+        list.innerHTML = `<div class="tx-empty">No transactions yet</div>`;
+        return;
+      }
+      list.innerHTML = items
+        .map((t) => {
+          const isIn = t.amount > 0;
+          const icon = CATEGORY_ICON[t.category] || CATEGORY_ICON.default;
+          const amountClass = t.status === "pending" ? "pending" : isIn ? "in" : "";
+          const sub = t.status === "pending" ? `${t.date} · Pending` : t.date;
+          return `
+            <div class="tx-item">
+              <div class="tx-icon ${isIn ? "in" : ""}"><i class="fa-solid ${icon}"></i></div>
+              <div class="tx-main">
+                <div class="tx-merchant">${escapeHtml(t.merchant)}</div>
+                <div class="tx-sub">${escapeHtml(sub)}</div>
+              </div>
+              <div class="tx-amount ${amountClass}">${fmt(t.amount, true)}</div>
+            </div>`;
+        })
+        .join("");
+    }
+
+    function renderMiniCards() {
+      const wrap = $("#cardMiniList");
+      wrap.innerHTML =
+        state.cards
+          .map(
+            (c) => `
+          <button class="card-mini" data-card="${c.id}">
+            <div class="card-thumb ${c.brand ? "brandgrad" : ""} ${c.frozen ? "frozen" : ""}">
+              <span class="chip-icon"></span>
+            </div>
+            <div class="card-mini-info">
+              <div class="card-mini-num"><span class="mono">••• ${c.last4}</span></div>
+              <div class="card-mini-type">${c.type}${c.frozen ? " · Frozen" : ""}</div>
+            </div>
+          </button>`
+          )
+          .join("") +
+        `<button class="card-add" data-action="add-card">
+          <span class="plus"><i class="fa-solid fa-plus"></i></span> Order a new card
+        </button>`;
+    }
+
+    function renderCarousel() {
+      const wrap = $("#carousel");
+      wrap.innerHTML = state.cards
+        .map(
+          (c) => `
+        <div class="credit-card ${c.brand ? "brandgrad" : ""} ${c.frozen ? "frozen" : ""}">
+          <div class="cc-top">
+            <span class="cc-brand">Pesocnica<span style="opacity:.6">Pay</span></span>
+            <i class="fa-brands fa-bluetooth" style="opacity:0"></i>
+          </div>
+          <div class="cc-chip"></div>
+          <div class="cc-number mono">••••  ••••  ••••  ${c.last4}</div>
+          <div class="cc-bottom">
+            <div>
+              <div class="cc-label">Card holder</div>
+              <div>${c.type === "Virtual" ? "Virtual card" : "Main card"}</div>
+            </div>
+            <div class="cc-network">VISA</div>
+          </div>
+        </div>`
+        )
+        .join("");
+      renderCardControls();
+    }
+
+    function renderCardControls() {
+      const card = state.cards[state.activeCardIndex] || state.cards[0];
+      $("#cardControls").innerHTML = `
+        <button class="cc-action ${card.frozen ? "active" : ""}" data-action="freeze">
+          <span class="ico"><i class="fa-solid fa-snowflake"></i></span>
+          ${card.frozen ? "Unfreeze" : "Freeze"}
+        </button>
+        <button class="cc-action" data-action="details">
+          <span class="ico"><i class="fa-regular fa-eye"></i></span>
+          Show PIN
+        </button>
+        <button class="cc-action" data-action="settings">
+          <span class="ico"><i class="fa-solid fa-sliders"></i></span>
+          Settings
+        </button>`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function switchView(view) {
+      $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+      $$("[data-view]").forEach((el) => {
+        if (el.classList.contains("top-nav-link") || el.classList.contains("footer-link")) {
+          el.classList.toggle("active", el.dataset.view === view);
+        }
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function randomAddress() {
+      const hex = "0123456789abcdef";
+      let a = "0x";
+      for (let i = 0; i < 40; i++) a += hex[Math.floor(Math.random() * 16)];
+      return a;
+    }
+
+    function shorten(addr) {
+      return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
+    }
+
+    function connect() {
+      state.connected = true;
+      state.address = randomAddress();
+      state.balance = 4827.61;
+      state.pending = 13.5;
+      updateConnectedUI();
+      renderBalance();
+      renderTransactions();
+      toast("Wallet connected", "fa-circle-check");
+    }
+
+    function disconnect() {
+      state.connected = false;
+      state.address = null;
+      state.balance = 0;
+      state.pending = 0;
+      updateConnectedUI();
+      renderBalance();
+      renderTransactions();
+      switchView("home");
+      toast("Wallet disconnected", "fa-circle-info");
+    }
+
+    function updateConnectedUI() {
+      $("#connectLabel").textContent = state.connected ? shorten(state.address) : "Connect wallet";
+      $("#accountName").textContent = state.connected ? "Pesocnica user" : "Not connected";
+      $("#accountAddr").textContent = state.connected ? state.address : "—";
+      $("#safeAddr").textContent = state.connected ? shorten(randomSafe()) : "—";
+      $("#accountAvatar").textContent = state.connected ? "P" : "?";
+    }
+
+    let _safe = null;
+    function randomSafe() {
+      if (!_safe) _safe = randomAddress();
+      return _safe;
+    }
+
+    let modalMode = "send";
+    function openModal(mode) {
+      if (!state.connected) {
+        toast("Connect your wallet first", "fa-triangle-exclamation", true);
+        return;
+      }
+      modalMode = mode;
+      const isSend = mode === "send";
+      $("#modalTitle").textContent = isSend ? "Send funds" : "Add funds";
+      $("#modalFieldLabel").textContent = isSend ? "Recipient address" : "From address";
+      $("#modalInput1").value = isSend ? "" : randomAddress();
+      $("#modalInput1").placeholder = "0x…";
+      $("#modalAmount").value = "";
+      $("#amountPrefix").textContent = sym();
+      $("#modalHint").textContent = isSend ? `Available: ${fmt(state.balance)}` : "Funds arrive after on-chain confirmation.";
+      $("#modalHint").classList.remove("error");
+      $("#modalOverlay").classList.add("open");
+      $("#modalAmount").focus();
+    }
+
+    function closeModal() {
+      $("#modalOverlay").classList.remove("open");
+    }
+
+    function confirmModal() {
+      const amount = parseFloat($("#modalAmount").value);
+      const hint = $("#modalHint");
+      if (!amount || amount <= 0) {
+        hint.textContent = "Enter a valid amount.";
+        hint.classList.add("error");
+        return;
+      }
+      if (modalMode === "send" && amount > state.balance) {
+        hint.textContent = "Amount exceeds available balance.";
+        hint.classList.add("error");
+        return;
+      }
+      if (modalMode === "send") {
+        state.balance -= amount;
+        state.transactions.unshift({
+          merchant: "Sent " + shorten($("#modalInput1").value || randomAddress()),
+          category: "transport",
+          amount: -amount,
+          date: "Just now",
+          status: "pending",
+        });
+        toast(`Sent ${fmt(amount)}`, "fa-paper-plane");
+      } else {
+        state.balance += amount;
+        state.transactions.unshift({
+          merchant: "Add funds",
+          category: "topup",
+          amount: amount,
+          date: "Just now",
+          status: "settled",
+        });
+        toast(`Added ${fmt(amount)}`, "fa-circle-check");
+      }
+      renderBalance();
+      renderTransactions();
+      closeModal();
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("gp-theme", theme);
+      const icon = $("#themeToggle").querySelector("i");
+      icon.className = theme === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
+      const darkSwitch = $("#darkSwitch");
+      if (darkSwitch) darkSwitch.checked = theme === "dark";
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme");
+      applyTheme(current === "dark" ? "light" : "dark");
+    }
+
+    function toast(msg, icon = "fa-circle-check", isError = false) {
+      const el = document.createElement("div");
+      el.className = "toast" + (isError ? " error" : "");
+      el.innerHTML = `<i class="fa-solid ${icon}"></i> ${escapeHtml(msg)}`;
+      $("#toastWrap").appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        el.style.transform = "translateX(20px)";
+        el.style.transition = "all 0.25s ease";
+        setTimeout(() => el.remove(), 250);
+      }, 2600);
+    }
+
+    async function copyAddress() {
+      if (!state.address) {
+        toast("Connect your wallet first", "fa-triangle-exclamation", true);
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(state.address);
+        toast("Address copied", "fa-copy");
+      } catch {
+        toast("Could not copy", "fa-triangle-exclamation", true);
+      }
+    }
+
+    function bindEvents() {
+      document.addEventListener("click", (e) => {
+        const navEl = e.target.closest("[data-view]");
+        if (navEl) {
+          e.preventDefault();
+          switchView(navEl.dataset.view);
+          return;
+        }
+        const miniCard = e.target.closest("[data-card]");
+        if (miniCard) {
+          const idx = state.cards.findIndex((c) => c.id === Number(miniCard.dataset.card));
+          state.activeCardIndex = Math.max(0, idx);
+          switchView("cards");
+          renderCardControls();
+          return;
+        }
+        const actionEl = e.target.closest("[data-action]");
+        if (actionEl) handleAction(actionEl.dataset.action);
+      });
+
+      $("#connectBtn").addEventListener("click", () => (state.connected ? switchView("account") : connect()));
+      $("#disconnectBtn").addEventListener("click", disconnect);
+      $("#themeToggle").addEventListener("click", toggleTheme);
+      $("#darkSwitch").addEventListener("change", (e) => applyTheme(e.target.checked ? "dark" : "light"));
+      $("#copyAddrBtn").addEventListener("click", copyAddress);
+
+      $("#sendFundsBtn").addEventListener("click", () => openModal("send"));
+      $("#addFundsBtn").addEventListener("click", () => openModal("add"));
+      $("#modalClose").addEventListener("click", closeModal);
+      $("#modalCancel").addEventListener("click", closeModal);
+      $("#modalConfirm").addEventListener("click", confirmModal);
+      $("#modalOverlay").addEventListener("click", (e) => {
+        if (e.target === $("#modalOverlay")) closeModal();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      });
+
+      $$("[data-txfilter]").forEach((chip) =>
+        chip.addEventListener("click", () => {
+          state.txFilter = chip.dataset.txfilter;
+          $$("[data-txfilter]").forEach((c) => c.classList.toggle("active", c === chip));
+          renderTransactions();
+        })
+      );
+
+      $("#currencySelect").addEventListener("change", (e) => {
+        state.currency = e.target.value;
+        localStorage.setItem("gp-currency", state.currency);
+        renderBalance();
+        renderTransactions();
+      });
+    }
+
+    function handleAction(action) {
+      switch (action) {
+        case "freeze": {
+          const card = state.cards[state.activeCardIndex];
+          card.frozen = !card.frozen;
+          renderCarousel();
+          renderMiniCards();
+          toast(card.frozen ? "Card frozen" : "Card unfrozen", card.frozen ? "fa-snowflake" : "fa-fire");
+          break;
+        }
+        case "details":
+          toast("PIN: 4827 (demo)", "fa-eye");
+          break;
+        case "settings":
+          toast("Card settings — coming soon", "fa-sliders");
+          break;
+        case "add-card":
+          toast("Card order flow — coming soon", "fa-plus");
+          break;
+      }
+    }
+
+    function init() {
+      applyTheme(localStorage.getItem("gp-theme") || "light");
+      $("#currencySelect").value = state.currency;
+      bindEvents();
+      renderBalance();
+      renderTransactions();
+      renderMiniCards();
+      renderCarousel();
+      updateConnectedUI();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
