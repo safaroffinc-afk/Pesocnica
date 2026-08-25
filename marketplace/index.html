@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нужен мастер? — Стройка и Ремонт | Philadelphia & Pennsylvania</title>
+    <meta name="description" content="Опишите работу один раз и получите предложения от подходящих специалистов в вашем районе. Philadelphia, Bucks County, Montgomery County.">
+    <link rel="stylesheet" href="assets/marketplace.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="topbar">
+        <a class="brand" href="index.html">
+            <span class="brand-icon"><i class="fas fa-helmet-safety"></i></span>
+            <span>Стройка и Ремонт<small>Philadelphia &amp; Pennsylvania</small></span>
+        </a>
+        <nav class="topbar-links">
+            <a href="index.html" class="active">Главная</a>
+            <a href="dashboard.html">Мой кабинет</a>
+            <a href="contractor.html">Для мастеров</a>
+            <a href="admin.html">CRM</a>
+        </nav>
+    </header>
+
+    <main class="page-main">
+        <!-- Главный экран (TЗ §4) -->
+        <section class="hero">
+            <h1>НУЖЕН <span>МАСТЕР?</span></h1>
+            <p class="lead">Опишите работу один раз и получите предложения от подходящих специалистов в&nbsp;вашем районе.</p>
+            <a class="btn btn-primary btn-lg" id="ctaMain" href="intake.html">
+                ПОЛУЧИТЬ ПРЕДЛОЖЕНИЯ <i class="fas fa-arrow-right"></i>
+            </a>
+            <div class="hero-points">
+                <span><i class="fas fa-check-circle"></i> Бесплатно для заказчика</span>
+                <span><i class="fas fa-check-circle"></i> До 5 подходящих специалистов</span>
+                <span><i class="fas fa-check-circle"></i> Без обязательств</span>
+            </div>
+        </section>
+
+        <section class="trust-strip">
+            <div class="trust-card">
+                <i class="fas fa-location-dot"></i>
+                <b>Ваш район</b>
+                <span>Philadelphia · Bucks · Montgomery</span>
+            </div>
+            <div class="trust-card">
+                <i class="fas fa-user-shield"></i>
+                <b>Проверенные мастера</b>
+                <span>Verified база подрядчиков</span>
+            </div>
+            <div class="trust-card">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <b>Сравнение смет</b>
+                <span>3–5 предложений на выбор</span>
+            </div>
+            <div class="trust-card">
+                <i class="fas fa-star"></i>
+                <b>Verified Reviews</b>
+                <span>Отзывы только по реальным проектам</span>
+            </div>
+        </section>
+
+        <section class="card mt-3" style="max-width: 720px; margin-left: auto; margin-right: auto;">
+            <div class="card-title"><i class="fas fa-list-check"></i> Как это работает</div>
+            <div class="grid-2">
+                <div><b>1. Опишите проект</b><br><span class="small muted">ZIP, вид работ, несколько понятных вопросов, фото объекта. Обычно 3–5 минут.</span></div>
+                <div><b>2. Подтвердите телефон</b><br><span class="small muted">SMS-код защищает мастеров от спама, а вас — от лишних звонков.</span></div>
+                <div><b>3. Получите предложения</b><br><span class="small muted">Система подберёт до 5 подходящих специалистов, они пришлют quotes.</span></div>
+                <div><b>4. Выберите и оставьте отзыв</b><br><span class="small muted">Сравните цены, сроки и рейтинг. После завершения — Verified Review.</span></div>
+            </div>
+        </section>
+
+        <section style="text-align: center; margin-top: 32px;">
+            <a class="btn btn-outline" id="ctaSecondary" href="intake.html">Найти мастера</a>
+        </section>
+    </main>
+</div>
+
+<script src="assets/config.js"></script>
+<script>
+// Alternative CTA text by traffic source (TЗ §5); UTM/tracking parameters are
+// forwarded into the intake flow so Lead Source is recorded (TЗ §3).
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    const source = (params.get('source') || params.get('utm_source') || '').toLowerCase();
+    const ctaBySource = {
+        'google': 'УЗНАТЬ СТОИМОСТЬ',
+        'google-ads': 'ПОЛУЧИТЬ СМЕТУ',
+        'fb': 'НАЙТИ МАСТЕРА',
+        'facebook': 'НАЙТИ МАСТЕРА',
+        'instagram': 'НАЧАТЬ РЕМОНТ',
+        'seo': 'СРАВНИТЬ МАСТЕРОВ',
+        'referral': 'НАЙТИ ПОДРЯДЧИКА'
+    };
+    const main = document.getElementById('ctaMain');
+    if (ctaBySource[source]) {
+        main.innerHTML = ctaBySource[source] + ' <i class="fas fa-arrow-right"></i>';
+    }
+    const query = window.location.search;
+    if (query) {
+        main.href = 'intake.html' + query;
+        document.getElementById('ctaSecondary').href = 'intake.html' + query;
+    }
+})();
+</script>
+</body>
+</html>
