@@ -168,5 +168,25 @@ check('SLA alert for unqualified 5h-old project', Engine.alerts().some(a => a.pr
 const dup = Object.assign({}, project, { id: 'PA-TEST-DUP', status: 'submitted', createdAt: new Date().toISOString() });
 check('duplicate detected', Engine.findDuplicate(dup) !== null);
 
+
+// --- Demo seeder (admin "Загрузить демо-данные") ---
+const before = Store.db.projects.length;
+const seeded = Store.seedDemo();
+check('seedDemo creates 8 projects / 5 customers', seeded.projects === 8 && seeded.customers === 5);
+check('projects actually added', Store.db.projects.length >= before + 8);
+const demoAlerts = Engine.alerts();
+check('seeded data produces SLA alerts', demoAlerts.length >= 2);
+check('seeded call task exists', Store.db.tasks.some(t => t.title.includes('HIGH VALUE')));
+const demoFunnel = Engine.funnel();
+check('seeded funnel reaches Verified Review', demoFunnel[9].value >= 2);
+const kitchenDemo = Store.db.projects.find(p => p.primaryCategory === 'kitchen-remodeling');
+check('kitchen demo has quotes', kitchenDemo && Store.quotesOf(kitchenDemo.id).length >= 1);
+const closedDemo = Store.db.projects.find(p => p.primaryCategory === 'tile' && p.status === 'closed');
+check('closed demo project has verified review', closedDemo && Store.reviewOf(closedDemo.id) && Store.reviewOf(closedDemo.id).verified);
+const highValueDemo = Store.db.projects.find(p => p.propertyType === 'restaurant');
+check('commercial demo flagged HIGH VALUE', highValueDemo && highValueDemo.highValue === true);
+check('waitlist entry seeded', Store.db.waitlist.some(w => w.zip === '19380'));
+check('demo customer statuses refreshed', Store.db.customers.some(c => c.status === 'Repeat'));
+
 console.log(failures ? `\n${failures} FAILURES` : '\nALL CHECKS PASSED');
 process.exit(failures ? 1 : 0);

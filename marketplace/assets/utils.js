@@ -173,3 +173,124 @@ const Utils = {
 };
 
 if (typeof module !== 'undefined') { module.exports = Utils; }
+
+// ------------------------------------------------------------
+// Dialog system — promise-based replacement for prompt/confirm.
+// Field types: text, number, date, time, textarea, select,
+// chips (single choice), stars (1-5 rating).
+// Resolves with {key: value, ...} on OK, null on cancel.
+// ------------------------------------------------------------
+Utils.dialog = function (options) {
+    return new Promise(resolve => {
+        const fields = options.fields || [];
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML = `
+            <div class="modal modal-sm dialog-modal">
+                <div class="modal-header">
+                    <h3>${Utils.escapeHtml(options.title || '')}</h3>
+                    <button class="modal-close" data-act="cancel"><i class="fas fa-xmark"></i></button>
+                </div>
+                ${options.message ? `<p class="small" style="color:var(--text-secondary); margin-bottom:14px">${Utils.escapeHtml(options.message)}</p>` : ''}
+                ${fields.map((field, fi) => {
+                    const label = field.label ? `<label>${Utils.escapeHtml(field.label)}${field.required ? ' *' : ''}</label>` : '';
+                    if (field.type === 'chips') {
+                        return `<div class="field" data-field="${fi}">${label}
+                            <div class="chip-row">${field.options.map((option, oi) => {
+                                const value = option.value !== undefined ? option.value : option;
+                                const text = option.label !== undefined ? option.label : option;
+                                return `<button type="button" class="chip ${field.value === value ? 'selected' : ''}" data-chip="${oi}">${Utils.escapeHtml(text)}</button>`;
+                            }).join('')}</div></div>`;
+                    }
+                    if (field.type === 'stars') {
+                        return `<div class="field" data-field="${fi}">${label}
+                            <div class="star-input">${[1, 2, 3, 4, 5].map(n =>
+                                `<i class="fas fa-star ${field.value >= n ? 'on' : ''}" data-star="${n}"></i>`).join('')}</div></div>`;
+                    }
+                    if (field.type === 'textarea') {
+                        return `<div class="field" data-field="${fi}">${label}
+                            <textarea class="input" data-input placeholder="${Utils.escapeHtml(field.placeholder || '')}">${Utils.escapeHtml(field.value || '')}</textarea></div>`;
+                    }
+                    if (field.type === 'select') {
+                        return `<div class="field" data-field="${fi}">${label}
+                            <select class="input" data-input>${field.options.map(option => {
+                                const value = option.value !== undefined ? option.value : option;
+                                const text = option.label !== undefined ? option.label : option;
+                                return `<option value="${Utils.escapeHtml(value)}" ${field.value === value ? 'selected' : ''}>${Utils.escapeHtml(text)}</option>`;
+                            }).join('')}</select></div>`;
+                    }
+                    return `<div class="field" data-field="${fi}">${label}
+                        <input class="input" data-input type="${field.type || 'text'}"
+                            value="${Utils.escapeHtml(field.value !== undefined && field.value !== null ? field.value : '')}"
+                            placeholder="${Utils.escapeHtml(field.placeholder || '')}"></div>`;
+                }).join('')}
+                <div class="flex mt-2" style="justify-content:flex-end">
+                    ${options.cancelLabel === null ? '' : `<button class="btn btn-outline" data-act="cancel">${Utils.escapeHtml(options.cancelLabel || 'Отмена')}</button>`}
+                    <button class="btn ${options.danger ? 'btn-danger' : 'btn-primary'}" data-act="ok">${Utils.escapeHtml(options.okLabel || 'OK')}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(backdrop);
+
+        const state = fields.map(field => field.value !== undefined ? field.value : null);
+
+        backdrop.addEventListener('click', event => {
+            const chip = event.target.closest('[data-chip]');
+            if (chip) {
+                const holder = chip.closest('[data-field]');
+                const fi = Number(holder.dataset.field);
+                const field = fields[fi];
+                const option = field.options[Number(chip.dataset.chip)];
+                state[fi] = option.value !== undefined ? option.value : option;
+                Utils.els('.chip', holder).forEach(c => c.classList.toggle('selected', c === chip));
+                return;
+            }
+            const star = event.target.closest('[data-star]');
+            if (star) {
+                const holder = star.closest('[data-field]');
+                const fi = Number(holder.dataset.field);
+                state[fi] = Number(star.dataset.star);
+                Utils.els('[data-star]', holder).forEach(s =>
+                    s.classList.toggle('on', Number(s.dataset.star) <= state[fi]));
+                return;
+            }
+            const act = event.target.closest('[data-act]');
+            if (!act && event.target !== backdrop) return;
+            const action = act ? act.dataset.act : 'cancel';
+            if (action === 'ok') {
+                const values = {};
+                let valid = true;
+                fields.forEach((field, fi) => {
+                    if (!['chips', 'stars'].includes(field.type)) {
+                        const input = backdrop.querySelector(`[data-field="${fi}"] [data-input]`);
+                        state[fi] = input ? input.value.trim() : state[fi];
+                    }
+                    if (field.required && (state[fi] === null || state[fi] === '' || state[fi] === undefined)) valid = false;
+                    values[field.key] = state[fi];
+                });
+                if (!valid) return Utils.toast('Заполните обязательные поля', 'danger');
+                cleanup();
+                resolve(values);
+            } else {
+                cleanup();
+                resolve(null);
+            }
+        });
+
+        const onKey = event => {
+            if (event.key === 'Escape') { cleanup(); resolve(null); }
+        };
+        document.addEventListener('keydown', onKey);
+        function cleanup() {
+            document.removeEventListener('keydown', onKey);
+            backdrop.remove();
+        }
+        const first = backdrop.querySelector('[data-input]');
+        if (first) first.focus();
+    });
+};
+
+// Sugar: confirm-style dialog resolving to boolean.
+Utils.confirmDialog = function (title, message, options = {}) {
+    return Utils.dialog(Object.assign({ title, message, okLabel: options.okLabel || 'Да' }, options))
+        .then(result => result !== null);
+};

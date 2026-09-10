@@ -38,6 +38,10 @@ const Dash = {
         const notifications = Store.notificationsFor('customer', customer.id).slice(0, 6);
         if (!Dash.activeProjectId && projects.length) Dash.activeProjectId = projects[0].id;
         const active = Store.project(Dash.activeProjectId);
+        // Customer opened the comparison screen (TЗ §41)
+        if (active && active.status === 'quotes-received' && Store.quotesOf(active.id).length) {
+            Store.setStatus(active.id, 'customer-comparing', 'system', 'Customer opened quote comparison');
+        }
 
         host.innerHTML = `
             <div class="flex-between">
@@ -45,6 +49,8 @@ const Dash = {
                     <h2>Здравствуйте, ${Utils.escapeHtml(customer.firstName)}!</h2>
                     <span class="small muted">${Utils.escapeHtml(customer.phone)} ·
                         ${customer.phoneVerified ? '<span class="badge badge-success">PHONE VERIFIED</span>' : ''}
+                        ${customer.emailVerified ? '<span class="badge badge-success">EMAIL VERIFIED</span>'
+                            : customer.email ? `<a href="#" class="small" onclick="event.preventDefault(); Dash.verifyEmail()">подтвердить email</a>` : ''}
                         <span class="badge badge-primary">${Utils.escapeHtml(customer.status)}</span></span>
                 </div>
                 <a class="btn btn-primary" href="intake.html"><i class="fas fa-plus"></i> START ANOTHER PROJECT</a>
@@ -87,6 +93,20 @@ const Dash = {
 
     open(projectId) {
         Dash.activeProjectId = projectId;
+        Dash.render();
+    },
+
+    // Email verification link is simulated (TЗ §34): it must not block anything
+    async verifyEmail() {
+        const customer = Store.sessionCustomer();
+        const ok = await Utils.confirmDialog('Подтверждение email',
+            `Мы отправили ссылку на ${customer.email}. В демо-режиме нажмите «Подтвердить», чтобы имитировать переход по ссылке.`,
+            { okLabel: 'Подтвердить' });
+        if (!ok) return;
+        customer.emailVerified = true;
+        Store.audit('customer', 'email.verify', 'Customer', customer.id, customer.email);
+        Store.save();
+        Utils.toast('Email подтверждён', 'success');
         Dash.render();
     },
 
@@ -229,11 +249,17 @@ const Dash = {
     },
 
     // --- Selection (TЗ §65, §66) ---
-    select(projectId, contractorId, quoteId) {
+    async select(projectId, contractorId, quoteId) {
         const contractor = Store.contractor(contractorId);
-        if (!confirm(`Вы уверены, что хотите выбрать этого подрядчика?\n\n${contractor.company}`)) return;
-        const reason = prompt('Почему не подошли остальные? (необязательно)\nPrice / Availability / Reviews / Communication / Experience / Other', '');
-        Store.selectContractor(projectId, contractorId, quoteId, reason ? { others: reason } : {});
+        const result = await Utils.dialog({
+            title: 'Выбрать подрядчика?',
+            message: `Вы уверены, что хотите выбрать этого подрядчика? ${contractor.company} получит полный адрес и ваши контакты.`,
+            okLabel: 'SELECT CONTRACTOR',
+            fields: [{ key: 'reason', type: 'chips', label: 'Почему не подошли остальные? (необязательно)',
+                options: Config.declineReasons }]
+        });
+        if (result === null) return;
+        Store.selectContractor(projectId, contractorId, quoteId, result.reason ? { others: result.reason } : {});
         Store.notify({ audience: 'customer', customerId: Store.project(projectId).customerId, projectId,
             channels: ['sms', 'in-app'], event: 'contractor-selected',
             text: `Вы выбрали ${contractor.company}. Подрядчик получил полный адрес и контакты.` });
@@ -404,8 +430,13 @@ const Dash = {
         });
         Store.setStatus(projectId, 'closed', 'system', 'Verified review received');
         // Short CSAT after the key milestone (TЗ §93)
-        const csat = prompt('Насколько легко было найти мастера? (1–5)', '5');
-        if (csat) Store.addCsat({ projectId, question: 'ease-of-finding', score: Number(csat) || null });
+        Utils.dialog({
+            title: 'Один быстрый вопрос',
+            okLabel: 'Отправить', cancelLabel: 'Пропустить',
+            fields: [{ key: 'score', type: 'stars', label: 'Насколько легко было найти мастера?' }]
+        }).then(result => {
+            if (result && result.score) Store.addCsat({ projectId, question: 'ease-of-finding', score: result.score });
+        });
         Store.refreshCustomerStatus(project.customerId);
         Dash.reviewDraft = { quality: 0, communication: 0, timeliness: 0, value: 0, cleanliness: 0, wouldHireAgain: null, text: '' };
         Utils.toast('Спасибо! Ваш Verified Review опубликован', 'success');
@@ -413,10 +444,19 @@ const Dash = {
     },
 
     // --- Site visit (TЗ §63) ---
-    requestVisit(projectId, contractorId) {
-        const date = prompt('Дата осмотра (например, 2026-09-02):');
-        if (!date) return;
-        const time = prompt('Время (например, 10:00):') || '10:00';
+    async requestVisit(projectId, contractorId) {
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        const result = await Utils.dialog({
+            title: 'Request Site Visit',
+            message: `Осмотр объекта: ${Store.contractor(contractorId).company}`,
+            okLabel: 'Отправить запрос',
+            fields: [
+                { key: 'date', type: 'date', label: 'Дата', value: tomorrow, required: true },
+                { key: 'time', type: 'time', label: 'Время', value: '10:00', required: true }
+            ]
+        });
+        if (result === null) return;
+        const { date, time } = result;
         Store.addAppointment({ projectId, contractorId, date, time });
         const project = Store.project(projectId);
         if (!['contractor-selected', 'in-progress'].includes(project.status)) {

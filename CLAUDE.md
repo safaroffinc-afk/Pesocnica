@@ -27,7 +27,7 @@ Pesocnica/
     ├── dashboard.html # Customer dashboard (matches, quotes, reviews)
     ├── contractor.html# Contractor portal (invitations, quotes) — demo
     ├── admin.html     # CRM admin panel (leads, matching, builder, settings)
-    ├── tests/smoke.js # Node smoke test of the logic layer (41 checks)
+    ├── tests/smoke.js # Node smoke test of the logic layer (51 checks)
     └── assets/        # config.js, store.js, engine.js, per-page JS, CSS, seed data
 ```
 

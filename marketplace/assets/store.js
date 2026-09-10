@@ -638,6 +638,202 @@ const Store = {
     clearDraft() { localStorage.removeItem(Store.DRAFT_KEY); },
 
     // --------------------------------------------------------
+    // Demo data seeder — fills the CRM with projects across the
+    // whole funnel so dashboards, SLA alerts and analytics are
+    // visible without manually creating a dozen applications.
+    // --------------------------------------------------------
+    seedDemo() {
+        const ago = hours => new Date(Date.now() - hours * 3600000).toISOString();
+
+        const mkCustomer = (firstName, lastName, phone, email, extra = {}) => {
+            const customer = Store.upsertCustomer(Object.assign({
+                firstName, lastName, phone, email,
+                phoneVerified: true, serviceConsent: true, language: 'ru'
+            }, extra));
+            return customer;
+        };
+
+        const mkProject = spec => {
+            const location = Store.lookupZip(spec.zip);
+            const project = {
+                id: Store.nextProjectId('PA'),
+                customerId: spec.customer.id,
+                zip: spec.zip,
+                location,
+                customerType: spec.customerType || 'homeowner',
+                propertyType: spec.propertyType || 'single-family',
+                categories: spec.categories,
+                primaryCategory: spec.categories[0],
+                answers: spec.answers || {},
+                description: spec.description,
+                stage: spec.stage || 'getting-estimates',
+                timeline: spec.timeline || '2-4-weeks',
+                budgetRange: spec.budget,
+                financingInterest: spec.financing || 'No',
+                address: { street: spec.street, unit: '', city: location.city, state: 'PA', zip: spec.zip, county: location.county },
+                contact: { firstName: spec.customer.firstName, lastName: spec.customer.lastName,
+                    phone: spec.customer.phone, email: spec.customer.email, language: 'ru' },
+                phoneVerified: true,
+                tracking: { source: spec.source || 'Website Organic' },
+                status: spec.statuses[spec.statuses.length - 1][0],
+                meta: { fillSeconds: 180 + Math.floor(Math.random() * 200) },
+                createdAt: ago(spec.ageHours),
+                updatedAt: ago(spec.statuses[spec.statuses.length - 1][1])
+            };
+            Store.db.projects.push(project);
+            let previous = null;
+            spec.statuses.forEach(([status, hoursAgo]) => {
+                Store.db.statusHistory.push({
+                    id: Utils.uid('hist'), projectId: project.id,
+                    from: previous, to: status, at: ago(hoursAgo), by: 'system', note: 'demo seed'
+                });
+                previous = status;
+            });
+            for (let i = 0; i < (spec.photos || 0); i++) {
+                Store.db.media.push({ id: Utils.uid('media'), projectId: project.id, kind: 'photo',
+                    name: `photo-${i + 1}.jpg`, size: 250000 + i * 40000, thumb: null, createdAt: ago(spec.ageHours) });
+            }
+            project.urgency = Engine.urgency(project);
+            project.emergency = Engine.isEmergency(project);
+            project.highValue = Engine.isHighValue(project);
+            const lead = Engine.leadScore(project);
+            const risk = Engine.riskScore(project);
+            project.leadScore = lead.total;
+            project.leadClass = lead.classification.label;
+            project.riskLevel = risk.level;
+            project.riskScore = risk.score;
+            return project;
+        };
+
+        const runMatching = (project, hoursAgo, respond = false) => {
+            const result = Engine.match(project);
+            result.matches.forEach(match => {
+                Store.db.matches.push(Object.assign({ id: Utils.uid('match'), projectId: project.id, createdAt: ago(hoursAgo) }, match));
+                Store.db.invitations.push({ id: Utils.uid('inv'), projectId: project.id,
+                    contractorId: match.contractorId, matchScore: match.score, status: 'invited',
+                    passReason: null, sentAt: ago(hoursAgo), respondedAt: null });
+            });
+            project.matchedAt = ago(hoursAgo);
+            if (respond) {
+                Store.db.invitations.filter(i => i.projectId === project.id).forEach((invitation, index) => {
+                    if (index < 3) {
+                        invitation.status = 'interested';
+                        invitation.respondedAt = ago(hoursAgo - 1);
+                        const quote = Engine.simulateQuote(project, invitation.contractorId);
+                        quote.id = Utils.uid('quote');
+                        quote.status = 'received';
+                        quote.createdAt = ago(hoursAgo - 2);
+                        Store.db.quotes.push(quote);
+                    } else {
+                        invitation.status = 'passed';
+                        invitation.passReason = 'Too Busy';
+                        invitation.respondedAt = ago(hoursAgo - 1);
+                    }
+                });
+            }
+            return result;
+        };
+
+        const anna = mkCustomer('Анна', 'Петрова', '+1 (215) 555-0134', 'anna.demo@example.com', { leadSource: 'Facebook Ads' });
+        const igor = mkCustomer('Игорь', 'Коваль', '+1 (267) 555-0188', 'igor.demo@example.com', { leadSource: 'Google Search' });
+        const olga = mkCustomer('Ольга', 'Диденко', '+1 (215) 555-0421', 'olga.demo@example.com', { leadSource: 'Instagram' });
+        const mark = mkCustomer('Mark', 'Stein', '+1 (610) 555-0377', 'mark.demo@example.com', { leadSource: 'Referral', customerType: 'investor' });
+        const dave = mkCustomer('David', 'Rossi', '+1 (484) 555-0290', 'dave.demo@example.com', { leadSource: 'Google Ads', customerType: 'business-owner' });
+
+        // 1. Fresh application awaiting qualification (inside SLA)
+        mkProject({ customer: anna, zip: '19147', categories: ['painting'], budget: '2.5k-5k',
+            description: 'Покрасить три комнаты и коридор, стены и потолки. Мелкий ремонт трещин.',
+            street: '811 Fitzwater St', photos: 3, source: 'Facebook Ads', ageHours: 1,
+            statuses: [['submitted', 1], ['under-review', 1]] });
+
+        // 2. Stale under-review -> qualification SLA alert
+        mkProject({ customer: igor, zip: '19111', categories: ['drywall', 'painting'], budget: '5k-10k',
+            description: 'Гипсокартон в бейсменте около 600 sq ft, шпаклёвка и покраска.',
+            street: '7220 Rising Sun Ave', photos: 2, source: 'Google Search', ageHours: 6,
+            statuses: [['submitted', 6], ['under-review', 6]] });
+
+        // 3. Need more information (no photos)
+        mkProject({ customer: olga, zip: '19046', categories: ['flooring'], budget: 'not-sure',
+            description: 'Заменить пол в гостиной.', street: '404 Cedar St', photos: 0,
+            source: 'Instagram', ageHours: 30,
+            statuses: [['submitted', 30], ['under-review', 29], ['need-info', 28]] }
+        ).infoRequest = { reason: 'photos', reasonLabel: 'Need Photos', note: 'Добавьте фото пола',
+            status: 'open', requestedAt: ago(28) };
+
+        // 4. Qualified but never matched -> "no contractor" SLA alert
+        const q = mkProject({ customer: mark, zip: '18974', categories: ['roofing'], budget: '10k-25k',
+            description: 'Замена кровли на rental-доме, 1600 sq ft, есть протечка после грозы.',
+            street: '55 York Rd', photos: 5, source: 'Referral', ageHours: 12, propertyType: 'multi-family',
+            statuses: [['submitted', 12], ['under-review', 11], ['qualified', 10]] });
+        q.qualifiedAt = ago(10);
+
+        // 5. Invited 16h ago, nobody responded -> "no response" SLA alert
+        const inv = mkProject({ customer: olga, zip: '19002', categories: ['hvac'], budget: '5k-10k',
+            description: 'Замена кондиционера, система полностью не работает, дом 2 этажа.',
+            street: '31 Butler Ave', photos: 2, source: 'Instagram', ageHours: 20,
+            answers: { 'hvac-scope': ['Replacement'], 'hvac-emergency': 'No' },
+            statuses: [['submitted', 20], ['under-review', 19], ['qualified', 18], ['matching', 17], ['contractors-invited', 16]] });
+        inv.qualifiedAt = ago(18);
+        runMatching(inv, 16, false);
+
+        // 6. Kitchen with quotes on the table (customer comparing)
+        const kitchen = mkProject({ customer: anna, zip: '18901', categories: ['kitchen-remodeling', 'countertops'], budget: '25k-50k',
+            description: 'Полный ремонт кухни 12x14: новые кабинеты, кварцевые столешницы, backsplash, освещение.',
+            street: '128 E State St', photos: 8, source: 'Facebook Ads', ageHours: 72, stage: 'ready-to-hire',
+            answers: { 'kitchen-scope': ['Full Remodel', 'Cabinets', 'Countertops'], 'kitchen-size': 'Medium', 'kitchen-layout': 'No', 'kitchen-materials': 'Need help choosing' },
+            statuses: [['submitted', 72], ['under-review', 71], ['qualified', 70], ['matching', 69], ['contractors-invited', 68], ['contractors-interested', 50], ['quotes-received', 46]] });
+        kitchen.qualifiedAt = ago(70);
+        runMatching(kitchen, 68, true);
+
+        // 7. High-value commercial build-out -> HIGH VALUE flag + call task
+        const commercial = mkProject({ customer: dave, zip: '19406', categories: ['commercial-remodeling', 'electrical', 'hvac'], budget: '100k-250k',
+            description: 'Build-out ресторана 3200 sq ft в King of Prussia: кухня, зал, бар, вентиляция, электрика.',
+            street: '160 N Gulph Rd', photos: 6, source: 'Google Ads', ageHours: 26,
+            customerType: 'business-owner', propertyType: 'restaurant', stage: 'getting-estimates', financing: 'Yes',
+            statuses: [['submitted', 26], ['under-review', 25], ['qualified', 24]] });
+        commercial.qualifiedAt = ago(24);
+        Store.db.tasks.push({ id: Utils.uid('task'), projectId: commercial.id, type: 'call', priority: 'High',
+            title: `CALL CUSTOMER — HIGH VALUE PROJECT (${commercial.id})`, status: 'open', createdAt: ago(24) });
+
+        // 8. Completed tile project with a verified review (closes the funnel)
+        const tile = mkProject({ customer: igor, zip: '19020', categories: ['tile'], budget: '2.5k-5k',
+            description: 'Плитка в ванной: пол и стены душевой, ~120 sq ft, керамогранит.',
+            street: '3300 Street Rd', photos: 4, source: 'Google Search', ageHours: 340, stage: 'ready-to-hire',
+            answers: { 'tile-area': ['Floor', 'Shower'], 'tile-sqft': 120, 'tile-type': 'Porcelain', 'tile-demo': 'Yes' },
+            statuses: [['submitted', 340], ['under-review', 339], ['qualified', 338], ['matching', 337], ['contractors-invited', 336],
+                ['contractors-interested', 320], ['quotes-received', 310], ['customer-comparing', 300], ['contractor-selected', 290],
+                ['in-progress', 250], ['completed', 180], ['review-pending', 175], ['closed', 170]] });
+        tile.qualifiedAt = ago(338);
+        runMatching(tile, 336, true);
+        const tileQuote = Store.db.quotes.find(x => x.projectId === tile.id);
+        if (tileQuote) {
+            tileQuote.status = 'accepted';
+            Store.db.quotes.filter(x => x.projectId === tile.id && x.id !== tileQuote.id)
+                .forEach(x => { x.status = 'declined'; });
+            Store.db.selections.push({ id: Utils.uid('sel'), projectId: tile.id,
+                contractorId: tileQuote.contractorId, quoteId: tileQuote.id,
+                declineReasons: { others: 'Price' }, createdAt: ago(290) });
+            tile.finalValue = Store.budgetMidpoint(tile);
+            tile.progress = 100;
+            tile.completionConfirmed = true;
+            Store.db.reviews.push({ id: Utils.uid('rev'), projectId: tile.id, customerId: igor.id,
+                contractorId: tileQuote.contractorId, quality: 5, communication: 5, timeliness: 4,
+                value: 5, cleanliness: 5, overall: 5, wouldHireAgain: true,
+                text: 'Сделали аккуратно и в срок, рекомендую.', verified: true, createdAt: ago(170) });
+        }
+
+        // Waitlist entry from a not-yet-served county (TЗ §8)
+        Store.db.waitlist.push({ id: Utils.uid('wait'), status: 'WAITLIST', zip: '19380',
+            phone: '+1 (610) 555-0912', city: 'West Chester', county: 'Chester County',
+            tracking: { source: 'SEO Article' }, createdAt: ago(50) });
+
+        [anna, igor, olga, mark, dave].forEach(c => Store.refreshCustomerStatus(c.id));
+        Store.audit('admin', 'demo.seed', 'Settings', 'demo', '8 projects, 5 customers, waitlist');
+        Store.save();
+        return { projects: 8, customers: 5 };
+    },
+
+    // --------------------------------------------------------
     // Session (customer "account" created from phone/email, TЗ §39)
     // --------------------------------------------------------
     setSessionCustomer(customerId) {

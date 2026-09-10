@@ -585,3 +585,10 @@ textarea.input { min-height: 120px; resize: vertical; }
     .funnel-row { grid-template-columns: 110px 1fr 42px; }
     .brand small { display: none; }
 }
+
+/* Edit links on the review step */
+.edit-link { color: var(--text-tertiary); font-size: 0.72rem; margin-left: 6px; text-decoration: none; }
+.edit-link:hover { color: var(--primary); }
+
+/* Dialog modals sit above regular modals (e.g. CRM project card) */
+.modal-backdrop:has(.dialog-modal) { z-index: 150; }

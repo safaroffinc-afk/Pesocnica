@@ -70,7 +70,7 @@ python -m http.server 8000
 
 ## Тесты
 
-`tests/smoke.js` — 41 проверка логического слоя (Node, без браузера):
+`tests/smoke.js` — 51 проверка логического слоя (Node, без браузера):
 
 ```bash
 node marketplace/tests/smoke.js
@@ -79,9 +79,13 @@ node marketplace/tests/smoke.js
 Покрывают: ZIP/зоны, анкеты и conditional logic, Project ID, urgency,
 Lead/Risk Score, AI assistant, hard filters и ранжирование, emergency-матчинг,
 quotes → selection → completion → Verified Review, маскирование контактов,
-воронку, аналитику источников, дубликаты, персистентность и SLA-алерты.
+воронку, аналитику источников, дубликаты, персистентность, SLA-алерты и
+демо-сидер.
 
 ## Демо-сценарий (5 минут)
+
+Быстрый вариант: `admin.html` → «Загрузить демо-данные» — CRM наполнится
+8 проектами по всей воронке (SLA-алерты, quotes, Verified Review). Полный цикл:
 
 1. `index.html` → «ПОЛУЧИТЬ ПРЕДЛОЖЕНИЯ» → заполните заявку (ZIP `18901`,
    Bathroom Remodeling, бюджет $10K–$25K) → OTP с экрана → SUBMIT.

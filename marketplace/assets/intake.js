@@ -85,9 +85,26 @@ const Intake = {
     },
 
     next() {
+        if (Intake.state.returnTo) {
+            // Changing the category from the review screen may leave required
+            // questions of the new category unanswered — route through them.
+            if (Intake.state.step === 'categories' &&
+                !Engine.requiredQuestionsAnswered({ primaryCategory: Intake.state.primaryCategory, answers: Intake.state.answers })) {
+                return Intake.go('questions');
+            }
+            const target = Intake.state.returnTo;
+            delete Intake.state.returnTo;
+            return Intake.go(target);
+        }
         const order = Intake.stepOrder;
         const index = order.indexOf(Intake.state.step);
         Intake.go(order[index + 1]);
+    },
+
+    // Jump from the review screen to fix one step, then come back
+    edit(step) {
+        Intake.state.returnTo = 'review';
+        Intake.go(step);
     },
 
     back() {
@@ -106,6 +123,10 @@ const Intake = {
             Intake.state.step === 'done' ? 'Готово' : `Шаг ${index + 1} из ${order.length - 1}`;
         host.innerHTML = Intake.steps[Intake.state.step]();
         if (Intake.mounts[Intake.state.step]) Intake.mounts[Intake.state.step]();
+    },
+
+    editLink(step) {
+        return `<a href="#" class="edit-link" onclick="event.preventDefault(); Intake.edit('${step}')">изменить</a>`;
     },
 
     nav(nextLabel = 'Далее', backable = true, nextId = 'btnNext') {
@@ -236,11 +257,14 @@ const Intake = {
                 <div class="step-title">ДОБАВЬТЕ ФОТО ОБЪЕКТА</div>
                 <div class="step-subtitle">Заявки с фотографиями обычно получают более точные предложения.</div>
                 <div class="upload-zone" onclick="document.getElementById('photoInput').click()">
-                    <i class="fas fa-camera"></i>
-                    <b>TAKE PHOTO / UPLOAD FROM PHONE</b><br>
+                    <i class="fas fa-images"></i>
+                    <b>UPLOAD FROM PHONE</b><br>
                     <span class="small muted">JPG, PNG, HEIC, WebP · до ${m.maxPhotos} фото (${photos}/${m.maxPhotos})</span>
                 </div>
-                <input type="file" id="photoInput" accept="image/jpeg,image/png,image/heic,image/heif,image/webp" capture="environment" multiple hidden>
+                <button class="btn btn-outline btn-block mt-1" onclick="document.getElementById('cameraInput').click()">
+                    <i class="fas fa-camera"></i> TAKE PHOTO</button>
+                <input type="file" id="photoInput" accept="image/jpeg,image/png,image/heic,image/heif,image/webp" multiple hidden>
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
                 <div class="flex mt-2" style="gap:8px; flex-wrap:wrap;">
                     <button class="btn btn-outline btn-sm" onclick="document.getElementById('videoInput').click()">
                         <i class="fas fa-video"></i> Видео (${videos}/${m.maxVideos})</button>
@@ -407,12 +431,12 @@ const Intake = {
                 <div class="step-title">Проверьте заявку</div>
                 <div class="step-subtitle">Всё верно? Тогда отправляем в подбор мастеров.</div>
                 <div class="summary-list">
-                    <div class="summary-row"><span class="label">Location</span><span class="value">${Utils.escapeHtml(`${s.location ? s.location.city + ', ' : ''}${s.zip}`)}</span></div>
-                    <div class="summary-row"><span class="label">Category</span><span class="value">${Utils.escapeHtml(s.categories.map(Engine.categoryLabel).join(', '))}</span></div>
-                    <div class="summary-row"><span class="label">Description</span><span class="value">${Utils.escapeHtml((s.description || '—').slice(0, 140))}${s.description.length > 140 ? '…' : ''}</span></div>
-                    <div class="summary-row"><span class="label">Photos</span><span class="value">${photos} фото, ${s.media.filter(m => m.kind === 'video').length} видео, ${s.media.filter(m => m.kind === 'document').length} док.</span></div>
-                    <div class="summary-row"><span class="label">Budget</span><span class="value">${budget ? budget.label : '—'}</span></div>
-                    <div class="summary-row"><span class="label">Timeline</span><span class="value">${timeline ? timeline.label : '—'}</span></div>
+                    <div class="summary-row"><span class="label">Location</span><span class="value">${Utils.escapeHtml(`${s.location ? s.location.city + ', ' : ''}${s.zip}`)} ${Intake.editLink('zip')}</span></div>
+                    <div class="summary-row"><span class="label">Category</span><span class="value">${Utils.escapeHtml(s.categories.map(Engine.categoryLabel).join(', '))} ${Intake.editLink('categories')}</span></div>
+                    <div class="summary-row"><span class="label">Description</span><span class="value">${Utils.escapeHtml((s.description || '—').slice(0, 140))}${s.description.length > 140 ? '…' : ''} ${Intake.editLink('description')}</span></div>
+                    <div class="summary-row"><span class="label">Photos</span><span class="value">${photos} фото, ${s.media.filter(m => m.kind === 'video').length} видео, ${s.media.filter(m => m.kind === 'document').length} док. ${Intake.editLink('media')}</span></div>
+                    <div class="summary-row"><span class="label">Budget</span><span class="value">${budget ? budget.label : '—'} ${Intake.editLink('budget')}</span></div>
+                    <div class="summary-row"><span class="label">Timeline</span><span class="value">${timeline ? timeline.label : '—'} ${Intake.editLink('timeline')}</span></div>
                     <div class="summary-row"><span class="label">Contact</span><span class="value">${Utils.escapeHtml(`${s.contact.firstName} ${s.contact.lastName}`)}<br><span class="small muted">${Utils.escapeHtml(Utils.formatPhone(s.contact.phone))} · <span class="badge badge-success">PHONE VERIFIED</span></span></span></div>
                 </div>
                 ${Intake.nav('SUBMIT PROJECT')}
@@ -463,16 +487,16 @@ const Intake = {
         if (q.type === 'multiselect' || q.type === 'checkbox') {
             const selected = Array.isArray(value) ? value : [];
             return `<div class="field" data-q="${q.id}">${label}
-                <div class="chip-row">${(q.options || []).map(option => `
+                <div class="chip-row">${(q.options || []).map((option, index) => `
                     <button class="chip ${selected.includes(option) ? 'selected' : ''}"
-                        onclick="Intake.toggleAnswer('${q.id}', '${Utils.escapeHtml(option)}')">${Utils.escapeHtml(option)}</button>`).join('')}
+                        onclick="Intake.toggleAnswerIdx('${q.id}', ${index})">${Utils.escapeHtml(option)}</button>`).join('')}
                 </div></div>`;
         }
         if (q.type === 'radio' || q.type === 'select') {
             return `<div class="field" data-q="${q.id}">${label}
-                <div class="chip-row">${(q.options || []).map(option => `
+                <div class="chip-row">${(q.options || []).map((option, index) => `
                     <button class="chip ${value === option ? 'selected' : ''}"
-                        onclick="Intake.setAnswer('${q.id}', '${Utils.escapeHtml(option)}')">${Utils.escapeHtml(option)}</button>`).join('')}
+                        onclick="Intake.setAnswerIdx('${q.id}', ${index})">${Utils.escapeHtml(option)}</button>`).join('')}
                 </div></div>`;
         }
         if (q.type === 'number' || q.type === 'money') {
@@ -515,6 +539,14 @@ const Intake = {
         Intake.save();
         Intake.render();
     },
+
+    optionOf(id, index) {
+        const question = Store.db.questions.find(q => q.id === id);
+        return question && question.options ? question.options[index] : undefined;
+    },
+
+    setAnswerIdx(id, index) { Intake.setAnswer(id, Intake.optionOf(id, index)); },
+    toggleAnswerIdx(id, index) { Intake.toggleAnswer(id, Intake.optionOf(id, index)); },
 
     // ----------------------------------------------------
     // Pickers
@@ -679,6 +711,9 @@ const Intake = {
                 Intake.save();
             };
             input.addEventListener('input', check);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') document.getElementById('btnNext').click();
+            });
             if (Intake.state.zip) check();
             document.getElementById('btnNext').onclick = () => {
                 const error = Intake.validators.zip();
@@ -714,11 +749,20 @@ const Intake = {
             let timer;
             input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(runAssist, 500); });
             runAssist();
-            Intake.wireNext('description');
+            // Read the textarea at click time — the debounced assist must not
+            // delay saving the text the user just typed.
+            document.getElementById('btnNext').onclick = () => {
+                Intake.state.description = input.value;
+                Intake.save();
+                const error = Intake.validators.description();
+                if (error) return Utils.toast(error, 'danger');
+                Intake.next();
+            };
         },
 
         media() {
             document.getElementById('photoInput').addEventListener('change', e => Intake.addFiles(e.target.files, 'photo'));
+            document.getElementById('cameraInput').addEventListener('change', e => Intake.addFiles(e.target.files, 'photo'));
             document.getElementById('videoInput').addEventListener('change', e => Intake.addFiles(e.target.files, 'video'));
             document.getElementById('docInput').addEventListener('change', e => Intake.addFiles(e.target.files, 'document'));
             Intake.wireNext();
@@ -765,14 +809,21 @@ const Intake = {
                 grab();
                 const error = Intake.validators.contact();
                 if (error) return Utils.toast(error, 'danger');
+                const digits = Utils.normalizePhone(Intake.state.contact.phone);
+                if (Intake.otp.verified && Intake.otp.verifiedFor === digits) {
+                    return Intake.next(); // phone unchanged, no re-verification needed
+                }
+                Intake.otp.verified = false;
                 Intake.sendOtp();
-                Intake.next();
+                Intake.go('otp'); // keep returnTo for after verification
             };
         },
 
         otp() {
+            // Code is never persisted; after a page reload send a fresh one.
+            if (!Intake.otp.code) Intake.sendOtp();
             const demo = document.getElementById('otpDemo');
-            demo.textContent = Intake.otp.code || '——————';
+            demo.textContent = Intake.otp.code;
             document.getElementById('otpResend').onclick = () => {
                 const otpConf = Store.settings.otp;
                 if (Intake.otp.sends >= otpConf.maxSendsPerHour) return Utils.toast('Слишком много отправок. Попробуйте позже (rate limit)', 'danger');
@@ -794,6 +845,7 @@ const Intake = {
                     return;
                 }
                 Intake.otp.verified = true;
+                Intake.otp.verifiedFor = Utils.normalizePhone(Intake.state.contact.phone);
                 Utils.toast('Телефон подтверждён — PHONE VERIFIED', 'success');
                 Intake.next();
             };
@@ -891,23 +943,32 @@ const Intake = {
         // Duplicate project detection (TЗ §46) — offer to update the existing one
         const duplicate = Engine.findDuplicate(project);
         if (duplicate && !Intake._duplicateConfirmed) {
-            if (confirm(`У вас уже есть активный похожий проект (${duplicate.id}). Хотите обновить его вместо создания нового?\n\nOK — обновить существующий, Cancel — создать новый.`)) {
-                Store.updateProject(duplicate.id, {
-                    description: project.description,
-                    answers: project.answers,
-                    budgetRange: project.budgetRange,
-                    timeline: project.timeline
-                }, 'customer', 'Updated via duplicate intake');
-                Store.notify({ audience: 'customer', customerId: customer.id, projectId: duplicate.id,
-                    channels: ['sms', 'email', 'in-app'], event: 'project-updated',
-                    text: `Проект ${duplicate.id} обновлён по вашей новой заявке.` });
-                Store.clearDraft();
-                Intake.submittedProjectId = duplicate.id;
-                Intake.state.step = 'done';
-                Intake.render();
-                return;
-            }
-            Intake._duplicateConfirmed = true;
+            Utils.dialog({
+                title: 'Похожий проект уже есть',
+                message: `У вас уже есть активный похожий проект (${duplicate.id}). Хотите обновить его вместо создания нового?`,
+                okLabel: 'Обновить существующий',
+                cancelLabel: 'Создать новый'
+            }).then(update => {
+                if (update) {
+                    Store.updateProject(duplicate.id, {
+                        description: project.description,
+                        answers: project.answers,
+                        budgetRange: project.budgetRange,
+                        timeline: project.timeline
+                    }, 'customer', 'Updated via duplicate intake');
+                    Store.notify({ audience: 'customer', customerId: customer.id, projectId: duplicate.id,
+                        channels: ['sms', 'email', 'in-app'], event: 'project-updated',
+                        text: `Проект ${duplicate.id} обновлён по вашей новой заявке.` });
+                    Store.clearDraft();
+                    Intake.submittedProjectId = duplicate.id;
+                    Intake.state.step = 'done';
+                    Intake.render();
+                } else {
+                    Intake._duplicateConfirmed = true;
+                    Intake.submit();
+                }
+            });
+            return;
         }
 
         // Derived scoring — persisted for CRM (TЗ §28, §42–§45, §51–§53)

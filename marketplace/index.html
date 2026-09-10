@@ -25,6 +25,7 @@
     </header>
 
     <main class="page-main">
+        <div id="draftBanner"></div>
         <!-- Главный экран (TЗ §4) -->
         <section class="hero">
             <h1>НУЖЕН <span>МАСТЕР?</span></h1>
@@ -79,6 +80,9 @@
 </div>
 
 <script src="assets/config.js"></script>
+<script src="assets/utils.js"></script>
+<script src="assets/seed.js"></script>
+<script src="assets/store.js"></script>
 <script>
 // Alternative CTA text by traffic source (TЗ §5); UTM/tracking parameters are
 // forwarded into the intake flow so Lead Source is recorded (TЗ §3).
@@ -102,6 +106,27 @@
     if (query) {
         main.href = 'intake.html' + query;
         document.getElementById('ctaSecondary').href = 'intake.html' + query;
+    }
+
+    // Automated follow-up for unfinished applications (TЗ §50):
+    // 1h — "almost done", 24h — reminder, 72h — final reminder.
+    Store.init();
+    const draft = Store.getDraft();
+    if (draft && draft.step && draft.step !== 'done') {
+        const hours = (Date.now() - new Date(draft.savedAt || Date.now()).getTime()) / 3600000;
+        const text = hours >= 72
+            ? 'Последнее напоминание: ваша заявка не завершена и скоро будет удалена.'
+            : hours >= 24
+                ? 'Напоминание: ваша заявка ждёт вас. Завершите её, чтобы получить предложения мастеров.'
+                : hours >= 1
+                    ? 'Вы почти закончили заявку. Добавьте недостающую информацию, чтобы мы смогли подобрать мастеров.'
+                    : 'У вас есть незавершённая заявка — можно продолжить с того же места.';
+        document.getElementById('draftBanner').innerHTML = `
+            <div class="ai-panel" style="max-width:720px; margin:0 auto; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <i class="fas fa-file-pen" style="color:var(--info)"></i>
+                <span style="flex:1; min-width:200px">${Utils.escapeHtml(text)}</span>
+                <a class="btn btn-primary btn-sm" href="intake.html">Продолжить заявку</a>
+            </div>`;
     }
 })();
 </script>

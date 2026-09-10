@@ -7,7 +7,7 @@ Store.init();
 
 const Admin = {
     tab: 'dashboard',
-    filters: { search: '', category: '', status: '', urgency: '', source: '', county: '' },
+    filters: { search: '', category: '', status: '', urgency: '', source: '', county: '', sort: 'newest' },
 
     tabs: [
         { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-line' },
@@ -65,6 +65,15 @@ const Admin = {
             const sources = Engine.sourceAnalytics();
             const tasks = Store.db.tasks.filter(t => t.status === 'open');
             return `
+            ${!projects.length ? `<div class="card mb-2" style="border-color:var(--primary); margin-bottom:16px">
+                <div class="flex-between">
+                    <div>
+                        <b><i class="fas fa-wand-magic-sparkles" style="color:var(--primary)"></i> CRM пуста</b>
+                        <div class="small muted">Загрузите демо-данные: 8 проектов по всей воронке, SLA-алерты, quotes и Verified Review — или создайте заявку через <a href="intake.html">intake</a>.</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="Admin.seedDemo()"><i class="fas fa-database"></i> Загрузить демо-данные</button>
+                </div>
+            </div>` : ''}
             <div class="stats-grid">
                 ${kpis.map(k => `<div class="stat-card"><div class="stat-value">${k.value}</div><div class="stat-label">${k.label}</div></div>`).join('')}
                 <div class="stat-card" style="border-color:var(--primary)">
@@ -133,13 +142,19 @@ const Admin = {
             if (f.urgency) list = list.filter(p => (p.urgency || 'Low') === f.urgency);
             if (f.source) list = list.filter(p => (p.tracking && p.tracking.source) === f.source);
             if (f.county) list = list.filter(p => p.location && p.location.county === f.county);
+            if (f.sort === 'score') list.sort((a, b) => (b.leadScore || 0) - (a.leadScore || 0));
+            if (f.sort === 'urgency') {
+                const rank = { High: 0, Medium: 1, Low: 2 };
+                list.sort((a, b) => rank[a.urgency || 'Low'] - rank[b.urgency || 'Low']);
+            }
             const allCategories = Config.categoryGroups.flatMap(g => g.items);
+            const usedSources = Array.from(new Set(Store.db.projects.map(p => (p.tracking && p.tracking.source) || 'Unknown')));
             return `
             <div class="card">
                 <div class="card-title"><i class="fas fa-inbox"></i> NEW CUSTOMER PROJECTS (${list.length})</div>
                 <div class="filters-row">
-                    <input class="input" placeholder="Поиск: ID, имя, телефон, адрес, ZIP" value="${Utils.escapeHtml(f.search)}"
-                        oninput="Admin.filters.search = this.value; Admin.render(); document.querySelector('.filters-row .input').focus()">
+                    <input class="input" id="projSearch" placeholder="Поиск: ID, имя, телефон, адрес, ZIP" value="${Utils.escapeHtml(f.search)}"
+                        oninput="Admin.setSearch(this.value)">
                     <select class="input" onchange="Admin.filters.category = this.value; Admin.render()">
                         <option value="">Категория</option>
                         ${allCategories.map(c => `<option value="${c.value}" ${f.category === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
@@ -155,6 +170,15 @@ const Admin = {
                     <select class="input" onchange="Admin.filters.county = this.value; Admin.render()">
                         <option value="">County</option>
                         ${Config.serviceAreas.map(a => `<option ${f.county === a.county ? 'selected' : ''}>${a.county}</option>`).join('')}
+                    </select>
+                    <select class="input" onchange="Admin.filters.source = this.value; Admin.render()">
+                        <option value="">Source</option>
+                        ${usedSources.map(src => `<option value="${Utils.escapeHtml(src)}" ${f.source === src ? 'selected' : ''}>${Utils.escapeHtml(src)}</option>`).join('')}
+                    </select>
+                    <select class="input" onchange="Admin.filters.sort = this.value; Admin.render()">
+                        <option value="newest" ${f.sort === 'newest' ? 'selected' : ''}>Сначала новые</option>
+                        <option value="score" ${f.sort === 'score' ? 'selected' : ''}>По Lead Score</option>
+                        <option value="urgency" ${f.sort === 'urgency' ? 'selected' : ''}>По Urgency</option>
                     </select>
                 </div>
                 <div class="table-wrap"><table class="data-table">
@@ -248,9 +272,9 @@ const Admin = {
                                     <td>${Utils.escapeHtml(q.label)}<br><span class="small muted">${(q.options || []).slice(0, 6).map(Utils.escapeHtml).join(' · ')}${(q.options || []).length > 6 ? '…' : ''}</span></td>
                                     <td><span class="badge badge-info">${q.type}</span></td>
                                     <td>${q.required ? '<i class="fas fa-check" style="color:var(--success)"></i>' : '—'}</td>
-                                    <td class="small muted">${q.showIf ? `если ${q.showIf.question} ${q.showIf.in ? 'in: ' + q.showIf.in.join(',') : 'not in: ' + q.showIf.notIn.join(',')}` : '—'}</td>
+                                    <td class="small muted">${q.showIf ? Utils.escapeHtml(`если ${q.showIf.question} ${q.showIf.in ? 'in: ' + q.showIf.in.join(',') : 'not in: ' + (q.showIf.notIn || []).join(',')}`) : '—'}</td>
                                     <td><button class="btn btn-outline btn-sm" onclick="Admin.editQuestion('${q.id}')"><i class="fas fa-pen"></i></button>
-                                        <button class="btn btn-outline btn-sm" onclick="if(confirm('Удалить вопрос?')){Store.deleteQuestion('${q.id}');Admin.render();}"><i class="fas fa-trash"></i></button></td>
+                                        <button class="btn btn-outline btn-sm" onclick="Admin.deleteQuestion('${q.id}')"><i class="fas fa-trash"></i></button></td>
                                 </tr>`).join('')}</tbody>
                         </table></div>
                     </div>`).join('')}
@@ -303,9 +327,11 @@ const Admin = {
                     <div class="summary-row"><span class="small">No-quote alert, часы</span>
                         <input class="input" type="number" style="width:80px; padding:6px" value="${s.sla.noQuoteAlertHours}"
                             onchange="Admin.setSla('noQuoteAlertHours', this.value)"></div>
-                    <div class="mt-2">
-                        <button class="btn btn-danger btn-sm" onclick="if(confirm('Сбросить ВСЕ данные демо (проекты, клиентов, настройки)?')){Store.reset();location.reload();}">
-                            <i class="fas fa-rotate-left"></i> Сбросить демо-данные</button>
+                    <div class="mt-2 flex" style="flex-wrap:wrap">
+                        <button class="btn btn-outline btn-sm" onclick="Admin.seedDemo()">
+                            <i class="fas fa-database"></i> Загрузить демо-данные</button>
+                        <button class="btn btn-danger btn-sm" onclick="Admin.resetAll()">
+                            <i class="fas fa-rotate-left"></i> Сбросить все данные</button>
                     </div>
                 </div>
             </div>`;
@@ -329,6 +355,48 @@ const Admin = {
                 </table></div>
             </div>`;
         }
+    },
+
+    // Re-render on search input without losing focus or the caret
+    setSearch(value) {
+        Admin.filters.search = value;
+        clearTimeout(Admin._searchTimer);
+        Admin._searchTimer = setTimeout(() => {
+            Admin.render();
+            const input = document.getElementById('projSearch');
+            if (input) {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            }
+        }, 250);
+    },
+
+    async seedDemo() {
+        const ok = await Utils.confirmDialog('Загрузить демо-данные?',
+            'Будут созданы 8 проектов по всей воронке, 5 клиентов, quotes, SLA-алерты и один завершённый проект с Verified Review.',
+            { okLabel: 'Загрузить' });
+        if (!ok) return;
+        const result = Store.seedDemo();
+        Utils.toast(`Создано проектов: ${result.projects}, клиентов: ${result.customers}`, 'success');
+        Admin.render();
+    },
+
+    async resetAll() {
+        const ok = await Utils.confirmDialog('Сбросить все данные?',
+            'Удалятся ВСЕ проекты, клиенты, отзывы и настройки. Действие необратимо.',
+            { okLabel: 'Сбросить', danger: true });
+        if (!ok) return;
+        Store.reset();
+        location.reload();
+    },
+
+    async deleteQuestion(questionId) {
+        const question = Store.db.questions.find(q => q.id === questionId);
+        const ok = await Utils.confirmDialog('Удалить вопрос?',
+            question ? question.label : '', { okLabel: 'Удалить', danger: true });
+        if (!ok) return;
+        Store.deleteQuestion(questionId);
+        Admin.render();
     },
 
     setWeight(group, key, value) {
@@ -493,13 +561,20 @@ const Admin = {
         Admin.renderBehindModal(projectId);
     },
 
-    requestInfo(projectId) {
-        const options = Config.infoRequestReasons.map((r, i) => `${i + 1}. ${r.label}`).join('\n');
-        const pick = prompt(`Что запросить у клиента?\n${options}\n\nВведите номер:`, '1');
-        if (pick === null) return;
-        const reason = Config.infoRequestReasons[Number(pick) - 1];
-        if (!reason) return;
-        const note = prompt('Комментарий для клиента (необязательно):', '') || '';
+    async requestInfo(projectId) {
+        const result = await Utils.dialog({
+            title: 'Request More Information',
+            message: 'Клиент получит SMS, Email и In-App уведомление.',
+            okLabel: 'Отправить запрос',
+            fields: [
+                { key: 'reason', type: 'chips', label: 'Что запросить?', required: true,
+                  options: Config.infoRequestReasons },
+                { key: 'note', type: 'textarea', label: 'Комментарий для клиента (необязательно)' }
+            ]
+        });
+        if (result === null) return;
+        const reason = Config.infoRequestReasons.find(r => r.value === result.reason);
+        const note = result.note || '';
         const project = Store.project(projectId);
         Store.updateProject(projectId, {
             infoRequest: { reason: reason.value, reasonLabel: reason.label, note, status: 'open', requestedAt: new Date().toISOString() }
@@ -513,11 +588,25 @@ const Admin = {
         Admin.renderBehindModal(projectId);
     },
 
-    editProject(projectId) {
+    async editProject(projectId) {
         const project = Store.project(projectId);
-        const description = prompt('Описание проекта:', project.description);
-        if (description === null) return;
-        Store.updateProject(projectId, { description }, 'admin', 'Manual edit');
+        const budgetOptions = Config.budgetRanges.map(b => ({ value: b.value, label: b.label }));
+        const result = await Utils.dialog({
+            title: `Edit — ${projectId}`,
+            okLabel: 'Сохранить',
+            fields: [
+                { key: 'description', type: 'textarea', label: 'Описание проекта', value: project.description, required: true },
+                { key: 'budgetRange', type: 'select', label: 'Бюджет', options: budgetOptions, value: project.budgetRange },
+                { key: 'timeline', type: 'select', label: 'Сроки',
+                  options: Config.timelineOptions.map(t => ({ value: t.value, label: t.label })), value: project.timeline }
+            ]
+        });
+        if (result === null) return;
+        Store.updateProject(projectId, {
+            description: result.description,
+            budgetRange: result.budgetRange,
+            timeline: result.timeline
+        }, 'admin', 'Manual edit');
         Admin.refreshScores(projectId);
         Admin.openProject(projectId);
     },
@@ -528,8 +617,11 @@ const Admin = {
         Admin.renderBehindModal(projectId);
     },
 
-    markSpam(projectId) {
-        if (!confirm('Пометить как спам и заблокировать клиента?')) return;
+    async markSpam(projectId) {
+        const ok = await Utils.confirmDialog('Пометить как спам?',
+            'Заявка будет отменена, а клиент заблокирован (Customer Status: Blocked).',
+            { okLabel: 'Spam + Block', danger: true });
+        if (!ok) return;
         const project = Store.project(projectId);
         Store.setStatus(projectId, 'cancelled', 'admin', 'Marked as spam');
         const customer = Store.customer(project.customerId);
@@ -540,10 +632,13 @@ const Admin = {
     },
 
     // Matching Engine trigger (TЗ §54–§58)
-    sendToMatching(projectId) {
+    async sendToMatching(projectId) {
         const project = Store.project(projectId);
         if (!Store.historyOf(projectId).some(h => h.to === 'qualified')) {
-            if (!confirm('Заявка ещё не квалифицирована (Approve). Всё равно отправить в Matching?')) return;
+            const ok = await Utils.confirmDialog('Заявка не квалифицирована',
+                'Обычно перед Matching заявку нужно квалифицировать (Approve). Всё равно отправить?',
+                { okLabel: 'Отправить в Matching' });
+            if (!ok) return;
         }
         Store.setStatus(projectId, 'matching', 'admin', 'Sent to Matching Engine');
         const result = Engine.match(project);

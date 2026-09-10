@@ -123,23 +123,48 @@ const CPortal = {
         CPortal.render();
     },
 
-    pass(invitationId) {
-        const reason = prompt(`Причина отказа?\n${Config.passReasons.join(' / ')}`, 'Too Busy');
-        Store.respondToInvitation(invitationId, 'passed', reason || 'Other');
+    async pass(invitationId) {
+        const result = await Utils.dialog({
+            title: 'PASS — почему не берёте заявку?',
+            message: 'Причина не видна заказчику и улучшает будущий подбор (Matching Engine).',
+            okLabel: 'PASS',
+            fields: [{ key: 'reason', type: 'chips', options: Config.passReasons, required: true }]
+        });
+        if (result === null) return;
+        Store.respondToInvitation(invitationId, 'passed', result.reason);
         Utils.toast('Отмечено. Причина учитывается Matching Engine', 'info');
         CPortal.render();
     },
 
-    quote(projectId) {
+    async quote(projectId) {
         const me = Store.contractor(CPortal.currentId);
         const project = Store.project(projectId);
         const simulated = Engine.simulateQuote(project, me.id);
-        const low = prompt('Цена от, $:', simulated.priceLow);
-        if (low === null) return;
-        const high = prompt('Цена до, $:', simulated.priceHigh) || low;
+        const result = await Utils.dialog({
+            title: 'Отправить смету (Quote)',
+            message: 'Ориентировочная вилка до осмотра объекта. Точную цену можно уточнить после Site Visit.',
+            okLabel: 'Отправить заказчику',
+            fields: [
+                { key: 'low', type: 'number', label: 'Цена от, $', value: simulated.priceLow, required: true },
+                { key: 'high', type: 'number', label: 'Цена до, $', value: simulated.priceHigh, required: true },
+                { key: 'start', type: 'date', label: 'Ориентировочное начало', value: simulated.startDate.slice(0, 10), required: true },
+                { key: 'duration', type: 'number', label: 'Длительность, дней', value: simulated.durationDays, required: true },
+                { key: 'materials', type: 'chips', label: 'Материалы', options: [
+                    { value: true, label: 'Included' }, { value: false, label: 'Not included' }],
+                    value: simulated.materialsIncluded },
+                { key: 'warranty', type: 'number', label: 'Гарантия, месяцев', value: simulated.warrantyMonths }
+            ]
+        });
+        if (result === null) return;
+        const low = Number(result.low) || simulated.priceLow;
+        const high = Math.max(low, Number(result.high) || simulated.priceHigh);
         const record = Store.addQuote(Object.assign(simulated, {
-            priceLow: Number(low) || simulated.priceLow,
-            priceHigh: Number(high) || simulated.priceHigh
+            priceLow: low,
+            priceHigh: high,
+            startDate: result.start ? new Date(result.start).toISOString() : simulated.startDate,
+            durationDays: Number(result.duration) || simulated.durationDays,
+            materialsIncluded: result.materials === true,
+            warrantyMonths: Number(result.warranty) || simulated.warrantyMonths
         }));
         Store.setStatus(projectId, 'quotes-received', 'contractor', `Quote from ${me.company}`);
         Store.notify({ audience: 'customer', customerId: project.customerId, projectId,
@@ -149,12 +174,19 @@ const CPortal = {
         CPortal.render();
     },
 
-    visit(appointmentId, decision) {
+    async visit(appointmentId, decision) {
         const appointment = Store.db.appointments.find(a => a.id === appointmentId);
         if (decision === 'reschedule') {
-            const date = prompt('Новая дата:', appointment.date) || appointment.date;
-            const time = prompt('Новое время:', appointment.time) || appointment.time;
-            Object.assign(appointment, { date, time, status: 'rescheduled' });
+            const result = await Utils.dialog({
+                title: 'Suggest New Time',
+                okLabel: 'Предложить',
+                fields: [
+                    { key: 'date', type: 'date', label: 'Новая дата', value: appointment.date, required: true },
+                    { key: 'time', type: 'time', label: 'Новое время', value: appointment.time, required: true }
+                ]
+            });
+            if (result === null) return;
+            Object.assign(appointment, { date: result.date, time: result.time, status: 'rescheduled' });
         } else {
             appointment.status = decision;
         }
@@ -182,10 +214,19 @@ const CPortal = {
         CPortal.render();
     },
 
-    changeOrder(projectId) {
-        const description = prompt('Описание изменения (Change Order):');
-        if (!description) return;
-        const amount = Number(prompt('Сумма изменения, $:', '500')) || 0;
+    async changeOrder(projectId) {
+        const result = await Utils.dialog({
+            title: 'Change Order',
+            message: 'Изменение объёма или стоимости работ. Заказчик должен подтвердить (Approve/Reject); всё хранится в истории проекта.',
+            okLabel: 'Отправить заказчику',
+            fields: [
+                { key: 'description', type: 'textarea', label: 'Описание изменения', required: true },
+                { key: 'amount', type: 'number', label: 'Сумма изменения, $', value: 500, required: true }
+            ]
+        });
+        if (result === null) return;
+        const description = result.description;
+        const amount = Number(result.amount) || 0;
         Store.addChangeOrder({ projectId, contractorId: CPortal.currentId, description, amount });
         const project = Store.project(projectId);
         Store.notify({ audience: 'customer', customerId: project.customerId, projectId,
