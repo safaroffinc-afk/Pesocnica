@@ -17,6 +17,8 @@
 ```
 Pesocnica/
 ├── CLAUDE.md          # AI assistant guidelines
+├── docs/
+│   └── tz-3-matching-engine.md  # ТЗ №3: Matching Engine & lead distribution spec
 ├── index.html         # HR Portal: main HTML structure
 ├── styles.css         # HR Portal: modern CSS with custom properties
 ├── script.js          # HR Portal: JavaScript for interactivity

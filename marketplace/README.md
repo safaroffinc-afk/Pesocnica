@@ -102,4 +102,5 @@ Escrow, платежи, contractor financing, полноценный AI estimate
 claims, native apps — а также реальные SMS/email-шлюзы, серверная
 авторизация/RBAC и интеграция с внешним geo-API (ZIP-база демо-данная).
 Следующий модуль по ТЗ — №3 Matching Engine (расширенное распределение,
-exclusive/shared leads, антиобход, обучение на истории).
+exclusive/shared leads, антиобход, обучение на истории) — полное ТЗ для
+разработчиков: [`docs/tz-3-matching-engine.md`](../docs/tz-3-matching-engine.md).
