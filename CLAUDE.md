@@ -8,8 +8,8 @@
 
 ## Repository Status
 
-- **Current State**: Active development - HR Portal UI
-- **Purpose**: Modern web application for HR request management
+- **Current State**: Active development - HR Portal UI + Construction Marketplace PA
+- **Purpose**: Modern web applications (HR request management; customer acquisition & project intake for a construction marketplace)
 - **Language(s)**: HTML, CSS, JavaScript (Vanilla)
 
 ## Directory Structure
@@ -17,10 +17,26 @@
 ```
 Pesocnica/
 ├── CLAUDE.md          # AI assistant guidelines
-├── index.html         # Main HTML structure
-├── styles.css         # Modern CSS with custom properties
-└── script.js          # JavaScript for interactivity
+├── docs/
+│   └── tz-3-matching-engine.md  # ТЗ №3: Matching Engine & lead distribution spec
+├── index.html         # HR Portal: main HTML structure
+├── styles.css         # HR Portal: modern CSS with custom properties
+├── script.js          # HR Portal: JavaScript for interactivity
+└── marketplace/       # Construction Marketplace PA (Customer Acquisition & Project Intake)
+    ├── README.md      # Module docs: architecture, demo scenario, TЗ mapping
+    ├── index.html     # Landing page ("НУЖЕН МАСТЕР?")
+    ├── intake.html    # Project Intake wizard (mobile-first, 14 steps)
+    ├── dashboard.html # Customer dashboard (matches, quotes, reviews)
+    ├── contractor.html# Contractor portal (invitations, quotes) — demo
+    ├── admin.html     # CRM admin panel (leads, matching, builder, settings)
+    ├── tests/smoke.js # Node smoke test of the logic layer (51 checks)
+    └── assets/        # config.js, store.js, engine.js, per-page JS, CSS, seed data
 ```
+
+The marketplace module is self-contained: no build step, no backend; state
+lives in localStorage. Run `node marketplace/tests/smoke.js` after changing
+`config.js`, `store.js`, or `engine.js`. See `marketplace/README.md` for the
+full spec mapping.
 
 ## Tech Stack
 
@@ -183,6 +199,7 @@ Add objects to `requestsData` array in `script.js`
 |------|-------------|
 | 2026-01-30 | Initial CLAUDE.md created |
 | 2026-01-30 | Added HR Portal UI (HTML, CSS, JS) |
+| 2026-08-25 | Added Construction Marketplace PA: Customer Acquisition & Project Intake module (`marketplace/`) |
 
 ---
 
