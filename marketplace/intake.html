@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Новая заявка — Стройка и Ремонт PA</title>
+    <link rel="stylesheet" href="assets/marketplace.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="topbar">
+        <a class="brand" href="index.html">
+            <span class="brand-icon"><i class="fas fa-helmet-safety"></i></span>
+            <span>Стройка и Ремонт<small>Project Intake</small></span>
+        </a>
+        <nav class="topbar-links">
+            <a href="dashboard.html">Мой кабинет</a>
+        </nav>
+    </header>
+
+    <main class="page-main">
+        <div class="wizard">
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 5%"></div></div>
+            <div class="progress-meta">
+                <span id="progressLabel">Шаг 1</span>
+                <span id="autosaveLabel"><i class="fas fa-cloud-arrow-up"></i> автосохранение</span>
+            </div>
+            <div id="stepHost"></div>
+        </div>
+    </main>
+</div>
+
+<!-- Honeypot: bots fill it, humans never see it (TЗ §45) -->
+<div class="hp-field" aria-hidden="true">
+    <label>Company website <input type="text" id="hpField" tabindex="-1" autocomplete="off"></label>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/utils.js"></script>
+<script src="assets/seed.js"></script>
+<script src="assets/store.js"></script>
+<script src="assets/engine.js"></script>
+<script src="assets/intake.js"></script>
+</body>
+</html>
